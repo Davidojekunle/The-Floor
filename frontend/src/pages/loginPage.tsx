@@ -1,17 +1,18 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation} from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 
 export function LoginPage() {
   const { user, login } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from ?? '/rooms'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (user) return <Navigate to="/rooms" replace />
+  if (user) return <Navigate to={from} replace />
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -19,7 +20,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate('/rooms', { replace: true })
+      
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong.')
     } finally {
@@ -61,7 +62,7 @@ export function LoginPage() {
         </button>
 
         <p className="switch-link">
-          No account? <Link to="/register">Register</Link>
+          No account? <Link to="/register" state={location.state}>register here</Link>
         </p>
       </form>
     </div>
