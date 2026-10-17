@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link,useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { createRoom } from '../api/room'
 import { useAuth } from '../auth/useAuth'
@@ -8,12 +8,14 @@ import { useAuth } from '../auth/useAuth'
 export function RoomsPage() {
   const { user, logout, refreshUser } = useAuth()
   const [name, setName] = useState('')
+  const navigate = useNavigate()
 
   const create = useMutation({
     mutationFn: (roomName: string) => createRoom(roomName),
-    onSuccess: async () => {
+    onSuccess: async (newRoom) => {
       setName('')
       await refreshUser()
+      navigate(`/rooms/${newRoom.id}`)
     },
   })
 
