@@ -94,3 +94,51 @@ button.primary:disabled {
   margin: 0 auto;
   padding: 2rem 1rem;
 }
+
+.room-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e3e6ee;
+}
+
+.room-header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.room-header a.active {
+  font-weight: 700;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.banner {
+  background: #fff3bf;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e3e6ee;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+code {
+  word-break: break-all;
+}
