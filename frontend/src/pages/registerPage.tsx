@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 
 export function RegisterPage() {
   const { user, register } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +27,7 @@ export function RegisterPage() {
         password,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
-      navigate('/rooms', { replace: true })
+    
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.fields) setFieldErrors(err.fields)
@@ -94,7 +94,7 @@ export function RegisterPage() {
         </button>
 
         <p className="switch-link">
-          Already registered? <Link to="/login">Log in</Link>
+          Already registered? <Link to="/login" state={location.state}>Log in</Link>
         </p>
       </form>
     </div>
