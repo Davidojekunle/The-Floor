@@ -80,3 +80,37 @@ def auth_headers(client, email="ada@example.com", password="password123", **regi
     register(client, email=email, password=password, **register_kwargs)
     token = login(client, email=email, password=password).json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+# ---- room helpers ----
+
+def create_room(client, headers, name="Studio Alpha"):
+    r = client.post("/api/v1/rooms", json={"name": name}, headers=headers)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def request_join(client, headers, invite_code):
+    return client.post(f"/api/v1/join/{invite_code}", headers=headers)
+
+
+def approve(client, room_id, membership_id, headers):
+    return client.post(f"/api/v1/rooms/{room_id}/join-requests/{membership_id}/approve", headers=headers)
+
+
+def reject(client, room_id, membership_id, headers):
+    return client.post(f"/api/v1/rooms/{room_id}/join-requests/{membership_id}/reject", headers=headers)
+
+
+def join_and_approve(client, room, head_headers, user_headers):
+    """User asks to join via the invite link; head approves. Returns the membership id."""
+    r = request_join(client, user_headers, room["invite_code"])
+    assert r.status_code == 201, r.text
+    membership_id = r.json()["membership_id"]
+    a = approve(client, room["id"], membership_id, head_headers)
+    assert a.status_code == 200, a.text
+    return membership_id
+
+
+def user_id_of(client, headers):
+    return client.get("/api/v1/me", headers=headers).json()["id"]

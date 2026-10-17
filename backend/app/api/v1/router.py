@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.api.v1 import auth, me
+from app.api.v1 import auth, join, me, rooms
 from app.db.session import get_db
 
 api_router = APIRouter()
@@ -23,3 +23,5 @@ def health_db(db: Session = Depends(get_db)) -> dict:
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(me.router, tags=["me"])
+api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
+api_router.include_router(join.router, prefix="/join", tags=["join"])

@@ -8,6 +8,8 @@ from app.core.errors import Unauthenticated
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.user import User
+from app.permissions.rules import RoomContext
+from app.services import room_service
 
 # auto_error=False so we raise OUR 401 format instead of FastAPI's default
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -32,6 +34,10 @@ def get_current_user(
     return user
 
 
-# Added in the next step:
-#   get_room_context(room_id, user, db) -> loads the room + caller's membership,
-#   and returns 404 if they aren't an active member.
+def get_room_context(
+    room_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RoomContext:
+    """Use on EVERY /rooms/{room_id}/... route. 404 unless the caller is an active member."""
+    return room_service.get_room_context(db, room_id, user)
