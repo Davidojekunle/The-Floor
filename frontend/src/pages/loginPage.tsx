@@ -22,7 +22,13 @@ export function LoginPage() {
       await login(email, password)
       
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong.')
+      setError(
+  err instanceof ApiError
+    ? err.status === 401
+      ? 'Incorrect email or password.'
+      : err.message
+    : 'Something went wrong.',
+)
     } finally {
       setSubmitting(false)
     }
