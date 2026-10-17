@@ -7,5 +7,6 @@ pydantic-settings
 email-validator
 pyjwt
 bcrypt
+tzdata
 pytest
 httpx
