@@ -76,3 +76,10 @@ export function rejectJoinRequest(roomId: string, membershipId: string) {
     { method: 'POST' },
   )
 }
+
+export function regenerateInvite(roomId: string) {
+  return apiRequest<{ invite_code: string }>(
+    `/rooms/${roomId}/invite/regenerate`,
+    { method: 'POST' },
+  )
+}
