@@ -4,7 +4,7 @@ import { LoginPage } from './pages/loginPage'
 import { RegisterPage } from './pages/registerPage'
 import { RoomsPage } from './pages/roomsPage'
 import { JoinPage } from './pages/joinPage'
-
+import { MembersPage } from './pages/MembersPage'
 import { RoomLayout } from './components/roomLayout'
 import { RoomProvider } from './room/roomProvider'
 import { JoinRequestsPage } from './pages/JoinRequestsPage'
@@ -35,6 +35,7 @@ export default function App() {
     </Route>
   </Route>
 </Route>
+<Route path="members" element={<MembersPage />} />
 </Routes>
 
 

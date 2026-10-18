@@ -142,3 +142,43 @@ button.primary:disabled {
 code {
   word-break: break-all;
 }
+.inline-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.chip {
+  display: inline-block;
+  background: #e7ecff;
+  color: #2b3fa8;
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.8rem;
+  margin: 0.2rem 0.3rem 0 0;
+}
+
+.badge {
+  background: #e9ecef;
+  border-radius: 6px;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: #f5f6fa;
+  border-radius: 8px;
+}
