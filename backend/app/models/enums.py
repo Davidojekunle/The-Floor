@@ -12,3 +12,23 @@ class MembershipStatus:
     ACTIVE = "active"
     REJECTED = "rejected"
     REMOVED = "removed"
+
+
+class StageStatus:
+    LOCKED = "locked"
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    BLOCKED = "blocked"
+    DONE = "done"
+
+
+class TaskStatus:
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+
+class ApprovalStatus:
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"

@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/{invite_code}", response_model=JoinPreview)
-def preview(invite_code: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def preview_invite(invite_code: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return room_service.join_preview(db, user, invite_code)
 
 

@@ -114,3 +114,111 @@ def join_and_approve(client, room, head_headers, user_headers):
 
 def user_id_of(client, headers):
     return client.get("/api/v1/me", headers=headers).json()["id"]
+
+
+# ---- tag / member helpers ----
+
+def create_tag(client, room_id, headers, name="Video Editor"):
+    r = client.post(f"/api/v1/rooms/{room_id}/tags", json={"name": name}, headers=headers)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def members_of(client, room_id, headers, **params):
+    r = client.get(f"/api/v1/rooms/{room_id}/members", params=params, headers=headers)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def membership_id_for(client, room_id, headers, user_id):
+    for m in members_of(client, room_id, headers, limit=100)["items"]:
+        if m["user"]["id"] == user_id:
+            return m["membership_id"]
+    raise AssertionError("member not found")
+
+
+# ---- task helpers ----
+
+def make_team(client):
+    """Room 'Studio Alpha' with a head (Ada) and two tagged members:
+    Femi = Content Writer, Tola = Video Editor. A third tag, Videographer, has nobody yet."""
+    from types import SimpleNamespace
+
+    head = auth_headers(client, email="head@example.com", name="Ada")
+    femi = auth_headers(client, email="femi@example.com", name="Femi")
+    tola = auth_headers(client, email="tola@example.com", name="Tola")
+    room = create_room(client, head)
+    join_and_approve(client, room, head, femi)
+    join_and_approve(client, room, head, tola)
+
+    tags = {n: create_tag(client, room["id"], head, n) for n in ("Content Writer", "Videographer", "Video Editor")}
+    ids = {"head": user_id_of(client, head), "femi": user_id_of(client, femi), "tola": user_id_of(client, tola)}
+    for person, tag in (("femi", "Content Writer"), ("tola", "Video Editor")):
+        mid = membership_id_for(client, room["id"], head, ids[person])
+        r = client.patch(
+            f"/api/v1/rooms/{room['id']}/members/{mid}", json={"tag_ids": [tags[tag]["id"]]}, headers=head
+        )
+        assert r.status_code == 200, r.text
+    return SimpleNamespace(head=head, femi=femi, tola=tola, room=room, tags=tags, ids=ids)
+
+
+FAR_FUTURE = "2099-10-30T17:00:00Z"
+
+
+def task_body(team, **overrides):
+    body = {
+        "title": "Product promo video",
+        "description": "30s cut for Instagram",
+        "due_date": FAR_FUTURE,
+        "stages": [
+            {"title": "Script", "tag_id": team.tags["Content Writer"]["id"]},
+            {"title": "Shoot", "tag_id": team.tags["Videographer"]["id"]},
+            {"title": "Edit", "tag_id": team.tags["Video Editor"]["id"]},
+        ],
+    }
+    body.update(overrides)
+    return body
+
+
+def post_task(client, team, headers=None, **overrides):
+    return client.post(f"/api/v1/rooms/{team.room['id']}/tasks", json=task_body(team, **overrides), headers=headers or team.head)
+
+
+def create_task(client, team, headers=None, **overrides):
+    r = post_task(client, team, headers, **overrides)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def stage_url(team, task, stage):
+    return f"/api/v1/rooms/{team.room['id']}/tasks/{task['id']}/stages/{stage['id'] if isinstance(stage, dict) else stage}"
+
+
+def put_status(client, team, task, stage, status, headers, reason=None):
+    body = {"status": status}
+    if reason is not None:
+        body["blocked_reason"] = reason
+    return client.put(stage_url(team, task, stage) + "/status", json=body, headers=headers)
+
+
+def get_task(client, team, task, headers=None):
+    r = client.get(f"/api/v1/rooms/{team.room['id']}/tasks/{task['id']}", headers=headers or team.head)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+# ---- chat helpers ----
+
+def messages(client, team, headers=None, **params):
+    r = client.get(f"/api/v1/rooms/{team.room['id']}/messages", params=params, headers=headers or team.head)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def send(client, team, headers, body="Hello", **refs):
+    return client.post(f"/api/v1/rooms/{team.room['id']}/messages", json={"body": body, **refs}, headers=headers)
+
+
+def unread(client, headers, room_name="Studio Alpha"):
+    rooms = client.get("/api/v1/me", headers=headers).json()["rooms"]
+    return next(r["unread_messages"] for r in rooms if r["name"] == room_name)
