@@ -34,7 +34,9 @@ def test_register_duplicate_email_is_409_case_insensitive(client):
     assert register(client, email="ada@example.com").status_code == 201
     r = register(client, email="ADA@Example.com")
     assert r.status_code == 409
-    assert r.json()["error"]["code"] == "CONFLICT"
+    error = r.json()["error"]
+    assert error["code"] == "CONFLICT"
+    assert error["fields"]["email"] == error["message"]  # UI can put it under the email input
 
 
 def test_register_email_is_normalised(client):
@@ -103,7 +105,7 @@ def test_login_wrong_password(client):
     register(client)
     r = login(client, password="wrong-password")
     assert r.status_code == 401
-    assert r.json()["error"]["code"] == "UNAUTHENTICATED"
+    assert r.json()["error"]["code"] == "INVALID_CREDENTIALS"
 
 
 def test_login_unknown_email_same_error_as_wrong_password(client):

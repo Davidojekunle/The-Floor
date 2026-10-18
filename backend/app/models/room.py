@@ -35,6 +35,11 @@ class Membership(Base):
     status: Mapped[str] = mapped_column(String(20), default=MembershipStatus.PENDING)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # chat read position (phase 6): everything up to and including this message is read
+    last_read_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL", use_alter=True, name="fk_memberships_last_read_message"),
+        nullable=True,
+    )
 
 
 class TempHead(Base):

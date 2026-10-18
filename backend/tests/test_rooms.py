@@ -125,9 +125,10 @@ def test_duplicate_request_and_already_member_are_409(client):
 
     assert request_join(client, other, room["invite_code"]).status_code == 201
     dup = request_join(client, other, room["invite_code"])
-    assert dup.status_code == 409 and dup.json()["error"]["code"] == "CONFLICT"
+    assert dup.status_code == 409 and dup.json()["error"]["code"] == "ALREADY_REQUESTED"
 
-    assert request_join(client, head, room["invite_code"]).status_code == 409  # head is already in
+    already = request_join(client, head, room["invite_code"])  # head is already in
+    assert already.status_code == 409 and already.json()["error"]["code"] == "ALREADY_MEMBER"
 
 
 def test_bad_invite_code_is_404(client):
@@ -228,7 +229,8 @@ def test_cannot_reject_someone_already_approved(client):
     head, other = two_users(client)
     room = create_room(client, head)
     mid = join_and_approve(client, room, head, other)
-    assert reject(client, room["id"], mid, head).status_code == 409
+    r = reject(client, room["id"], mid, head)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "REQUEST_NOT_PENDING"
 
 
 def test_unknown_membership_is_404(client):
