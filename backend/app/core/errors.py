@@ -29,6 +29,12 @@ class Unauthenticated(AppError):
     code = "UNAUTHENTICATED"
 
 
+class InvalidCredentials(Unauthenticated):
+    """Wrong email or password on login (kept separate from an expired or missing token)."""
+
+    code = "INVALID_CREDENTIALS"
+
+
 class Forbidden(AppError):
     status_code = 403
     code = "FORBIDDEN"
@@ -42,6 +48,46 @@ class NotFound(AppError):
 class Conflict(AppError):
     status_code = 409
     code = "CONFLICT"
+
+
+class InvalidTransition(Conflict):
+    code = "INVALID_TRANSITION"
+
+
+class LaterStagesStarted(Conflict):
+    code = "LATER_STAGES_STARTED"
+
+
+class LastStage(Conflict):
+    code = "LAST_STAGE"
+
+
+class AlreadyMember(Conflict):
+    code = "ALREADY_MEMBER"
+
+
+class AlreadyRequested(Conflict):
+    code = "ALREADY_REQUESTED"
+
+
+class RequestNotPending(Conflict):
+    code = "REQUEST_NOT_PENDING"
+
+
+class MemberNotActive(Conflict):
+    code = "MEMBER_NOT_ACTIVE"
+
+
+class TaskNotApproved(Conflict):
+    code = "TASK_NOT_APPROVED"
+
+
+class AlreadyApproved(Conflict):
+    code = "ALREADY_APPROVED"
+
+
+class AlreadyHead(Conflict):
+    code = "ALREADY_HEAD"
 
 
 class ValidationFailed(AppError):

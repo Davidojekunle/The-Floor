@@ -7,8 +7,15 @@ from app.api.deps import get_current_user, get_room_context
 from app.db.session import get_db
 from app.models.user import User
 from app.permissions.rules import RoomContext
-from app.schemas.common import Page, PageParams, page_params
-from app.schemas.room import InviteOut, JoinRequestItem, MembershipOut, RoomCreate, RoomOut, RoomSummary
+from app.schemas.common import PageParams, page_params
+from app.schemas.room import (
+    InviteOut,
+    JoinRequestPage,
+    MembershipOut,
+    RoomCreate,
+    RoomOut,
+    RoomSummaryPage,
+)
 from app.services import room_service
 
 router = APIRouter()
@@ -20,7 +27,7 @@ def create_room(body: RoomCreate, user: User = Depends(get_current_user), db: Se
     return room_service.room_out(db, ctx)
 
 
-@router.get("", response_model=Page[RoomSummary])
+@router.get("", response_model=RoomSummaryPage)
 def list_my_rooms(
     params: PageParams = Depends(page_params),
     user: User = Depends(get_current_user),
@@ -28,7 +35,7 @@ def list_my_rooms(
 ):
     rooms = room_service.list_rooms_for_user(db, user)
     page = rooms[params.offset : params.offset + params.limit]
-    return Page[RoomSummary](items=page, total=len(rooms), page=params.page, limit=params.limit)
+    return RoomSummaryPage(items=page, total=len(rooms), page=params.page, limit=params.limit)
 
 
 @router.get("/{room_id}", response_model=RoomOut)
@@ -41,14 +48,14 @@ def regenerate_invite(ctx: RoomContext = Depends(get_room_context), db: Session 
     return room_service.regenerate_invite(db, ctx)
 
 
-@router.get("/{room_id}/join-requests", response_model=Page[JoinRequestItem])
+@router.get("/{room_id}/join-requests", response_model=JoinRequestPage)
 def list_join_requests(
     params: PageParams = Depends(page_params),
     ctx: RoomContext = Depends(get_room_context),
     db: Session = Depends(get_db),
 ):
     items, total = room_service.list_join_requests(db, ctx, params)
-    return Page[JoinRequestItem](items=items, total=total, page=params.page, limit=params.limit)
+    return JoinRequestPage(items=items, total=total, page=params.page, limit=params.limit)
 
 
 @router.post("/{room_id}/join-requests/{membership_id}/approve", response_model=MembershipOut)

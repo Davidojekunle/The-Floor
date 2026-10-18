@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.errors import Conflict, Unauthenticated
+from app.core.errors import Conflict, InvalidCredentials
 from app.core.security import hash_password, verify_password
 from app.models.user import User
 
@@ -21,7 +21,8 @@ def _dummy_hash() -> str:
 
 def register_user(db: Session, *, name: str, email: str, password: str, timezone: str) -> User:
     email = normalize_email(email)
-    taken = Conflict("An account with this email already exists.")
+    message = "An account with this email already exists."
+    taken = Conflict(message, fields={"email": message})
 
     if db.scalar(select(User).where(User.email == email)):
         raise taken
@@ -40,7 +41,7 @@ def authenticate(db: Session, *, email: str, password: str) -> User:
     user = db.scalar(select(User).where(User.email == normalize_email(email)))
     if user is None:
         verify_password(password, _dummy_hash())
-        raise Unauthenticated("Incorrect email or password.")
+        raise InvalidCredentials("Incorrect email or password.")
     if not verify_password(password, user.password_hash):
-        raise Unauthenticated("Incorrect email or password.")
+        raise InvalidCredentials("Incorrect email or password.")
     return user
