@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.api.v1 import auth, join, me, rooms
+from app.api.v1 import auth, join, me, members, messages, rooms, stages, tags, tasks, templates
+from app.core.openapi import AUTHED_RESPONSES
 from app.db.session import get_db
 
 api_router = APIRouter()
@@ -23,5 +24,19 @@ def health_db(db: Session = Depends(get_db)) -> dict:
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(me.router, tags=["me"])
-api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
-api_router.include_router(join.router, prefix="/join", tags=["join"])
+api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"], responses=AUTHED_RESPONSES)
+api_router.include_router(join.router, prefix="/join", tags=["join"], responses=AUTHED_RESPONSES)
+api_router.include_router(tags.router, prefix="/rooms/{room_id}/tags", tags=["tags"], responses=AUTHED_RESPONSES)
+api_router.include_router(members.router, prefix="/rooms/{room_id}/members", tags=["members"], responses=AUTHED_RESPONSES)
+api_router.include_router(
+    tasks.router, prefix="/rooms/{room_id}/tasks", tags=["tasks"], responses=AUTHED_RESPONSES
+)
+api_router.include_router(
+    stages.router, prefix="/rooms/{room_id}/tasks/{task_id}/stages", tags=["stages"], responses=AUTHED_RESPONSES
+)
+api_router.include_router(
+    templates.router, prefix="/rooms/{room_id}/templates", tags=["templates"], responses=AUTHED_RESPONSES
+)
+api_router.include_router(
+    messages.router, prefix="/rooms/{room_id}/messages", tags=["chat"], responses=AUTHED_RESPONSES
+)
