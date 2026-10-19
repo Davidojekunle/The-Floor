@@ -24,11 +24,12 @@ from app.services import email_service, my_task_service
 from app.services import notification_service as notes
 from app.utils.time import as_utc, utcnow
 
-CATEGORIES = ("requests", "decisions", "assignments", "daily_digest")
+CATEGORIES = ("requests", "decisions", "assignments", "mentions", "daily_digest")
 LABEL = {
     "requests": "requests and approvals",
     "decisions": "decisions about you",
     "assignments": "stages assigned to you",
+    "mentions": "mentions in chat",
     "daily_digest": "the daily digest",
 }
 _GONE = ("removed_from_room", "room_deleted")  # the room can't be opened any more
@@ -74,6 +75,8 @@ def _send(db: Session, user: User, category: str, subject: str, title: str, para
 def link(n: Notification) -> str:
     base = get_settings().frontend_url.rstrip("/")
     if n.room_id and n.type not in _GONE:
+        if n.type == "mentioned":
+            return f"{base}/rooms/{n.room_id}/chat"
         if n.task_id:
             return f"{base}/rooms/{n.room_id}/tasks/{n.task_id}"
         return f"{base}/rooms/{n.room_id}"
@@ -84,10 +87,13 @@ GROUP_SUBJECT = {
     "requests": "{n} new requests in Taskroom",
     "decisions": "{n} updates about you in Taskroom",
     "assignments": "{n} stages need you in Taskroom",
+    "mentions": "{n} mentions in Taskroom",
 }
 
 
 def _detail(n: Notification) -> list[str]:
+    if n.type == "mentioned" and n.data and n.data.get("preview"):
+        return [f"“{n.data['preview']}”"]
     if n.type == "proposal_rejected" and n.data and n.data.get("reason"):
         return [f"Reason: {n.data['reason']}"]
     if n.type == "stages_unassigned" and n.data:

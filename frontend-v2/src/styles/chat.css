@@ -84,3 +84,15 @@
 .msg-tools .menu-wrap .icon-btn { width: 30px; height: 30px; }
 .composer-box textarea { font: inherit; color: inherit; }
 .msg .text a { color: var(--accent); }
+
+/* @mentions: in messages (yours stands out, and so does the whole message), and the picker above the box */
+.mention { color: var(--accent); font-weight: 500; }
+.mention.me { background: var(--accent-soft); border-radius: 4px; padding: 0 3px; margin: 0 -1px; }
+.msg.mentions-me { background: color-mix(in srgb, var(--accent-soft) 55%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+.composer-box { position: relative; }
+.mention-list { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px); z-index: 20; display: grid; padding: 4px;
+  max-width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-pop);
+  transform-origin: bottom left; animation: menu-in 0.15s var(--ease-out); }
+.mention-opt { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--text); font: inherit; font-weight: 500; text-align: left; cursor: pointer; }
+.mention-opt[aria-selected='true'] { background: var(--hover); }

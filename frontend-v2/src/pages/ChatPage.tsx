@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { markMessagesRead, type Message, type Ref } from '../api/chat'
+import type { UserBrief } from '../api/rooms'
 import { listMembers } from '../api/members'
 import { getTask, listTasks } from '../api/tasks'
 import { useAuth } from '../auth/useAuth'
@@ -40,6 +41,10 @@ function ChatView() {
   const seenCount = useRef(0)
   const lastMarked = useRef<string | null>(null)
   const shiftHeld = useRef(false) // Shift + Enter keeps a new line on keyboards that skip keydown (see onBeforeInput)
+  // @mentions: who was picked from the list for this draft, and the "@que" being typed right now
+  const [picked, setPicked] = useState<Map<string, string>>(() => new Map()) // user id -> name
+  const [query, setQuery] = useState<{ text: string; start: number } | null>(null)
+  const [active, setActive] = useState(0)
 
   const [draft, setDraft] = useState('')
   const [link, setLink] = useState<{ task: Ref; stage: Ref | null } | null>(null)
@@ -101,9 +106,13 @@ function ChatView() {
     // Read the box itself: a phone keyboard can commit the last word in the same tick as Send, before state catches up.
     const body = (input.current?.value ?? draft).trim()
     if (!body) return
-    const sent = { body, task: link?.task ?? null, stage: link?.stage ?? null }
+    // A pick counts only while its @Name is still in the text (deleting it un-mentions them).
+    const mentions = [...picked].filter(([, name]) => body.includes(`@${name}`)).map(([id, name]) => ({ id, name }))
+    const sent = { body, task: link?.task ?? null, stage: link?.stage ?? null, mentions }
     setDraft('')
     setLink(null)
+    setPicked(new Map())
+    setQuery(null)
     typing.stopped()
     atBottom.current = true
     resize(input.current, '')
@@ -116,6 +125,24 @@ function ChatView() {
 
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
     shiftHeld.current = e.shiftKey
+    if (candidates.length > 0) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const step = e.key === 'ArrowDown' ? 1 : -1
+        setActive((i) => (i + step + candidates.length) % candidates.length)
+        return
+      }
+      if ((e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) || e.key === 'Tab') {
+        e.preventDefault()
+        choose(candidates[active] ?? candidates[0])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setQuery(null)
+        return
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       void submit()
@@ -126,8 +153,14 @@ function ChatView() {
   // would insert a line break. Catch the line break itself: the keyboard's Send key sends. A native listener,
   // because React's onBeforeInput is a polyfill that never reports inputType.
   const submitRef = useRef(submit)
+  const pickRef = useRef<(() => boolean) | null>(null) // picks the highlighted @name; false when the list is closed
   useEffect(() => {
     submitRef.current = submit
+    pickRef.current = () => {
+      if (!candidates.length) return false
+      choose(candidates[active] ?? candidates[0])
+      return true
+    }
   })
   useEffect(() => {
     const el = input.current
@@ -135,7 +168,7 @@ function ChatView() {
     const onBeforeInput = (e: InputEvent) => {
       if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !shiftHeld.current) {
         e.preventDefault()
-        void submitRef.current()
+        if (!pickRef.current?.()) void submitRef.current()
       }
     }
     el.addEventListener('beforeinput', onBeforeInput)
@@ -143,6 +176,30 @@ function ChatView() {
   }, [])
 
   const people = members.data?.items ?? []
+  const q = query?.text.toLowerCase() ?? ''
+  const candidates: UserBrief[] = query
+    ? people
+        .map((m) => m.user)
+        .filter((u) => u.id !== user?.id && u.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(q)))
+        .slice(0, 6)
+    : []
+
+  /** Swap the "@que" being typed for "@Full Name " and remember who it is. */
+  function choose(person: UserBrief) {
+    const el = input.current
+    if (!el || !query) return
+    const caret = el.selectionStart ?? el.value.length
+    const before = el.value.slice(0, query.start)
+    const text = `${before}@${person.name} ${el.value.slice(caret)}`
+    const at = before.length + person.name.length + 2
+    setDraft(text)
+    setPicked((m) => new Map(m).set(person.id, person.name))
+    setQuery(null)
+    resize(el, text)
+    typing.typed(text)
+    requestAnimationFrame(() => el.setSelectionRange(at, at))
+  }
+
   const typingNames = typing.typers.map((id) => people.find((m) => m.user.id === id)?.user.name).filter((n): n is string => !!n)
 
   return (
@@ -214,6 +271,25 @@ function ChatView() {
               </button>
             </span>
           )}
+          {candidates.length > 0 && (
+            <div className="mention-list" id="mention-list" role="listbox" aria-label="Mention someone">
+              {candidates.map((u, i) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  role="option"
+                  aria-selected={i === active}
+                  className="mention-opt"
+                  onPointerDown={(e) => e.preventDefault()} // keep the keyboard up
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => choose(u)}
+                >
+                  <Avatar name={u.name} size="sm" />
+                  {u.name}
+                </button>
+              ))}
+            </div>
+          )}
           <label htmlFor="chat-input" hidden>
             Message
           </label>
@@ -228,7 +304,14 @@ function ChatView() {
               setDraft(e.target.value)
               resize(e.target, e.target.value)
               typing.typed(e.target.value)
+              setQuery(mentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length))
+              setActive(0)
             }}
+            onClick={(e) => setQuery(mentionQuery(e.currentTarget.value, e.currentTarget.selectionStart ?? 0))}
+            onBlur={() => setQuery(null)}
+            aria-autocomplete="list"
+            aria-expanded={candidates.length > 0}
+            aria-controls={candidates.length > 0 ? 'mention-list' : undefined}
             onKeyDown={onKey}
             onKeyUp={(e) => (shiftHeld.current = e.shiftKey)}
             enterKeyHint="send"
@@ -418,11 +501,14 @@ function UserMessage(props: {
   onRetry: (m: LocalMessage) => void
   onDiscard: (m: LocalMessage) => void
 }) {
-  const { m, cont, at, onDelete, onRetry, onDiscard } = props
+  const { m, cont, at, myId, onDelete, onRetry, onDiscard } = props
   const { room } = useRoom()
   const local = isLocal(m) ? m : null
   const name = m.sender?.name ?? 'Someone'
-  const cls = ['msg', cont && 'cont', m.deleted && 'deleted', local && !local.failed && 'sending'].filter(Boolean).join(' ')
+  const forMe = !m.deleted && !!myId && (m.mentions ?? []).some((u) => u.id === myId)
+  const cls = ['msg', cont && 'cont', m.deleted && 'deleted', forMe && 'mentions-me', local && !local.failed && 'sending']
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div className={cls}>
@@ -435,7 +521,7 @@ function UserMessage(props: {
           </div>
         )}
         <div className="text">
-          {m.deleted ? 'This message was deleted.' : linkify(m.body ?? '')}
+          {m.deleted ? 'This message was deleted.' : renderBody(m.body ?? '', m.mentions ?? [], myId)}
           {local && !local.failed && <span className="faint small"> Sending…</span>}
         </div>
         {!m.deleted && m.task && (
@@ -545,6 +631,30 @@ function LinkTaskDialog({ onClose, onPick }: { onClose: () => void; onPick: (l: 
       )}
     </Dialog>
   )
+}
+
+/** The "@que" right before the caret, if the person is typing a mention. */
+function mentionQuery(value: string, caret: number): { text: string; start: number } | null {
+  const m = value.slice(0, caret).match(/(?:^|\s)@([^\s@]{0,30})$/)
+  return m ? { text: m[1], start: caret - m[1].length - 1 } : null
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** A message's text with its @mentions marked (yours stronger) and links clickable. */
+function renderBody(text: string, mentions: UserBrief[], myId?: string): ReactNode[] {
+  const people = [...new Map(mentions.map((u) => [u.name, u])).values()].sort((a, b) => b.name.length - a.name.length)
+  if (!people.length) return linkify(text)
+  const re = new RegExp(`(${people.map((u) => `@${escapeRe(u.name)}`).join('|')})`, 'g')
+  return text.split(re).map((part, i) => {
+    if (i % 2 === 0) return <Fragment key={i}>{linkify(part)}</Fragment>
+    const who = people.find((u) => `@${u.name}` === part)
+    return (
+      <span key={i} className={`mention${who?.id === myId ? ' me' : ''}`}>
+        {part}
+      </span>
+    )
+  })
 }
 
 /** Make http(s) links in a message clickable (shared progress updates carry one). Everything else stays plain text. */

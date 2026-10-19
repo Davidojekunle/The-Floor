@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { deleteMessage, listMessages, sendMessage, type Message, type MessagePage, type Ref } from '../api/chat'
+import type { UserBrief } from '../api/rooms'
 import { useAuth } from '../auth/useAuth'
 import { useLive, useLiveSignals } from '../live/liveContext'
 import { useActionError } from './useRoomError'
@@ -9,7 +10,11 @@ const POLL_MS = 4000 // new messages while the chat is open and visible, only wh
 const REFRESH_MS = 60000 // re-read the latest page so deletions show up
 
 /** A message being sent from this browser. Shown greyed until the server confirms it. */
-export type LocalMessage = Message & { local: true; failed: boolean; draft: { body: string; task: Ref | null; stage: Ref | null } }
+export type LocalMessage = Message & {
+  local: true
+  failed: boolean
+  draft: { body: string; task: Ref | null; stage: Ref | null; mentions?: UserBrief[] }
+}
 export type ChatItem = Message | LocalMessage
 export const isLocal = (m: ChatItem): m is LocalMessage => 'local' in m
 
@@ -164,6 +169,7 @@ export function useChat(roomId: string) {
           body: local.draft.body,
           task_id: local.draft.task?.id,
           stage_id: local.draft.stage?.id,
+          mention_ids: local.draft.mentions?.map((u) => u.id),
         })
         // Don't move `newest` forward: messages sent by others just before ours still need polling in.
         merge([saved])
@@ -191,6 +197,7 @@ export function useChat(roomId: string) {
         body: draft.body,
         task: draft.task,
         stage: draft.stage,
+        mentions: draft.mentions ?? [],
         event: null,
         created_at: new Date().toISOString(),
         deleted: false,

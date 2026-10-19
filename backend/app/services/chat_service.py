@@ -15,6 +15,7 @@ from app.models.user import User
 from app.permissions.rules import RoomContext, can, require
 from app.schemas.message import EVENT_MODELS, MessageCreate, MessageOut, MessagePage, Ref
 from app.schemas.room import UserBrief
+from app.services import notification_service as notes
 from app.services import task_common
 from app.realtime import events as live
 from app.utils.time import as_utc, utcnow
@@ -119,8 +120,19 @@ def _older_than(m: Message):
     return or_(Message.created_at < m.created_at, and_(Message.created_at == m.created_at, Message.id < m.id))
 
 
+def _mention_ids(m: Message) -> list[uuid.UUID]:
+    out = []
+    for raw in m.mentions or []:
+        try:
+            out.append(uuid.UUID(str(raw)))
+        except ValueError:
+            continue
+    return out
+
+
 def build(db: Session, ctx: RoomContext, messages: list[Message]) -> list[MessageOut]:
     user_ids = {uid for m in messages for uid in (m.sender_id, m.event_actor_id, m.event_subject_id) if uid}
+    user_ids |= {uid for m in messages if m.deleted_at is None for uid in _mention_ids(m)}
     users = {u.id: UserBrief(id=u.id, name=u.name) for u in db.scalars(select(User).where(User.id.in_(user_ids)))} if user_ids else {}
     task_ids = {m.task_id for m in messages if m.task_id}
     tasks = {
@@ -154,6 +166,7 @@ def build(db: Session, ctx: RoomContext, messages: list[Message]) -> list[Messag
                 body=None if deleted else m.body,
                 task=Ref(id=task.id, title=task.title) if task else None,
                 stage=Ref(id=stage.id, title=stage.title) if stage else None,
+                mentions=[] if deleted else [users[u] for u in _mention_ids(m) if u in users],
                 event=event,
                 created_at=as_utc(m.created_at),
                 deleted=deleted,
@@ -202,6 +215,19 @@ def list_messages(
 
 # ------------------------------------------------------------------ writing
 
+def _resolve_mentions(db: Session, ctx: RoomContext, body: MessageCreate) -> list[User]:
+    """The picked people who are active members, aren't the sender, and whose @Name is still in the text
+    (deleting "@Femi" before sending un-mentions Femi). Unknown ids are dropped quietly: someone may have left."""
+    wanted = set(body.mention_ids) - {ctx.membership.user_id}
+    if not wanted:
+        return []
+    people = db.scalars(
+        select(User).join(Membership, Membership.user_id == User.id).where(
+            User.id.in_(wanted), Membership.room_id == ctx.room.id, Membership.status == MembershipStatus.ACTIVE)
+    ).all()
+    return [u for u in people if f"@{u.name}" in body.body]
+
+
 def send_message(db: Session, ctx: RoomContext, body: MessageCreate) -> MessageOut:
     require(ctx, "chat.send")
     task = stage = None
@@ -226,6 +252,7 @@ def send_message(db: Session, ctx: RoomContext, body: MessageCreate) -> MessageO
             task = candidate
     if errors:
         raise ValidationFailed(INVALID, fields=errors)
+    mentioned = _resolve_mentions(db, ctx, body)
 
     message = Message(
         room_id=ctx.room.id,
@@ -234,11 +261,13 @@ def send_message(db: Session, ctx: RoomContext, body: MessageCreate) -> MessageO
         body=body.body,
         task_id=task.id if task else None,
         stage_id=stage.id if stage else None,
+        mentions=[str(u.id) for u in mentioned] or None,
         created_at=_now(db),
     )
     db.add(message)
     db.flush()
     live.message_created(db, ctx.room.id, message.id)
+    notes.chat_message(db, ctx.room, _user(db, ctx.membership.user_id), message.id, body.body, {u.id for u in mentioned})
     db.commit()
     return build(db, ctx, [message])[0]
 

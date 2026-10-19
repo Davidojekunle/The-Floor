@@ -28,6 +28,8 @@ class Message(Base):
     # optional pointer at work (titles are read live when the message is shown)
     task_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
     stage_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stages.id", ondelete="SET NULL"), nullable=True)
+    # user messages: who was @mentioned (user id strings). The body carries the visible "@Name".
+    mentions: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     # system messages only
     event_type: Mapped[str | None] = mapped_column(String(40), nullable=True)

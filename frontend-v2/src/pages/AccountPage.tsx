@@ -230,6 +230,18 @@ function NotificationsSection() {
           onChange={(v) => update({ assignments: v })}
         />
         <Switch
+          label="Mentions"
+          detail="Someone @mentions you in a room's chat."
+          checked={settings.mentions}
+          onChange={(v) => update({ mentions: v })}
+        />
+        <Switch
+          label="Every chat message"
+          detail="A pop-up on your devices for each new message in your rooms, not just mentions. No emails."
+          checked={settings.all_messages}
+          onChange={(v) => update({ all_messages: v })}
+        />
+        <Switch
           label="Daily summary email"
           detail="At 8:00 your time: what's due, overdue or blocked, and what's waiting on you."
           checked={settings.daily_digest}

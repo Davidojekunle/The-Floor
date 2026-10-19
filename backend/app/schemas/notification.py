@@ -9,6 +9,7 @@ NotificationType = Literal[
     "join_approved", "proposal_approved", "proposal_rejected", "temp_head_granted", "head_transferred",
     "removed_from_room", "room_deleted",
     "stage_ready", "stage_assigned",
+    "mentioned",
 ]
 
 
@@ -33,7 +34,8 @@ class NotificationOut(BaseModel):
     data: dict | None = Field(
         None,
         description="Extra details by type. proposal_rejected: {reason}. temp_head_granted: {expires_at}. "
-                    "stages_unassigned: {stages: [{task_id, task_title, stage_id, stage_title}]}.",
+                    "stages_unassigned: {stages: [{task_id, task_title, stage_id, stage_title}]}. "
+                    "mentioned: {message_id, preview}.",
     )
     created_at: datetime
     read: bool
@@ -54,6 +56,8 @@ class NotificationSettingsOut(BaseModel):
     decisions: bool
     assignments: bool
     daily_digest: bool
+    mentions: bool = Field(description="Someone @mentions you in chat: bell, email and push.")
+    all_messages: bool = Field(description="A push for every chat message in your rooms (push only, off by default).")
     muted_rooms: list[uuid.UUID] = Field(description="Silenced on both channels. Change with PUT/DELETE muted-rooms/{room_id}.")
 
 
@@ -65,6 +69,8 @@ class NotificationSettingsUpdate(BaseModel):
     decisions: bool | None = None
     assignments: bool | None = None
     daily_digest: bool | None = None
+    mentions: bool | None = None
+    all_messages: bool | None = None
 
     @field_validator("*", mode="before")
     @classmethod

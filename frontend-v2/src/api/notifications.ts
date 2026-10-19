@@ -13,6 +13,7 @@ export type NotificationType =
   | 'room_deleted'
   | 'stage_ready'
   | 'stage_assigned'
+  | 'mentioned'
 
 type Named = { id: string; name: string }
 type Titled = { id: string; title: string }
@@ -29,6 +30,8 @@ export type Notification = {
   data: {
     reason?: string
     expires_at?: string
+    preview?: string // mentioned: what was said
+    message_id?: string
     stages?: { task_id: string; task_title: string; stage_id: string; stage_title: string }[]
   } | null
   created_at: string
@@ -53,6 +56,8 @@ export type NotificationSettings = {
   decisions: boolean
   assignments: boolean
   daily_digest: boolean
+  mentions: boolean // @mentions: bell, email and push
+  all_messages: boolean // a push for every chat message (push only)
   muted_rooms: string[] // no emails and no bell items from these rooms
 }
 

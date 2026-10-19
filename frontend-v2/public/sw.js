@@ -18,10 +18,11 @@ self.addEventListener('push', (event) => {
       if (windows.some((w) => w.visibilityState === 'visible' && w.focused)) return
       await self.registration.showNotification(data.title || 'The Floor', {
         body: data.body || undefined,
-        tag: data.tag, // the same notification never shows twice
+        tag: data.tag, // the same notification never shows twice; a room's chat shares one ("chat:<room>")
+        renotify: Boolean(data.tag && data.tag.startsWith('chat:')), // ...and a newer message there still alerts
         icon: '/icon-192.png',
         badge: '/badge-72.png',
-        data: { url: data.url || '/notifications', id: data.tag },
+        data: { url: data.url || '/notifications', id: data.tag && !data.tag.startsWith('chat:') ? data.tag : undefined },
       })
     })(),
   )

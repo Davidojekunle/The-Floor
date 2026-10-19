@@ -50,6 +50,8 @@ class NotificationSettings(Base):
     decisions: Mapped[bool] = mapped_column(Boolean, default=True)
     assignments: Mapped[bool] = mapped_column(Boolean, default=True)
     daily_digest: Mapped[bool] = mapped_column(Boolean, default=True)
+    mentions: Mapped[bool] = mapped_column(Boolean, default=True)  # someone @mentions you in chat
+    all_messages: Mapped[bool] = mapped_column(Boolean, default=False)  # push for every chat message (push only)
     last_digest_on: Mapped[date | None] = mapped_column(Date, nullable=True)  # the user's local date
 
 

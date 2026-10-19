@@ -28,12 +28,14 @@ const ICON: Record<string, IconName> = {
   room_deleted: 'x',
   stage_ready: 'task',
   stage_assigned: 'task',
+  mentioned: 'chat',
 }
 
 /** Where tapping a notification goes. Null when the place is gone (a deleted room, a room you were removed from). */
 function targetOf(n: Notification): string | null {
   if (!n.room || n.type === 'room_deleted' || n.type === 'removed_from_room') return null
   const room = `/rooms/${n.room.id}`
+  if (n.type === 'mentioned') return `${room}/chat`
   if (n.type === 'join_requested' || n.type === 'proposal_submitted') return `${room}/requests`
   if (n.type === 'stages_unassigned') {
     const first = n.data?.stages?.[0]
@@ -149,7 +151,9 @@ function NotificationRow({ n }: { n: Notification }) {
   }
 
   const detail =
-    n.type === 'proposal_rejected' && n.data?.reason ? (
+    n.type === 'mentioned' && n.data?.preview ? (
+      <span className="quote">{n.data.preview}</span>
+    ) : n.type === 'proposal_rejected' && n.data?.reason ? (
       <span className="quote">{n.data.reason}</span>
     ) : n.type === 'temp_head_granted' && n.data?.expires_at ? (
       <span className="meta">Until {formatDay(n.data.expires_at, tz)}</span>

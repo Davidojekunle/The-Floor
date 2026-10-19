@@ -37,9 +37,10 @@ CATEGORY = {
     "room_deleted": "decisions",
     "stage_ready": "assignments",
     "stage_assigned": "assignments",
+    "mentioned": "mentions",
 }
 TYPES = tuple(CATEGORY)
-SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest")
+SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest", "mentions", "all_messages")
 _DUE = "_notification_email_due"  # per-transaction: (user, category) -> due time, for rows not yet flushed
 
 
@@ -50,7 +51,7 @@ def settings_for(db: Session, user_id) -> NotificationSettings:
     row = db.get(NotificationSettings, user_id)
     if row is None:
         row = NotificationSettings(user_id=user_id, email_enabled=True, requests=True, decisions=True,
-                                   assignments=True, daily_digest=True)
+                                   assignments=True, daily_digest=True, mentions=True, all_messages=False)
     return row
 
 
@@ -132,7 +133,10 @@ def notify(db: Session, user_id, type_: str, title: str, *, room=None, task=None
     db.add(n)
     live.notification_created(db, user_id, n.room_id, n.id)
     if getattr(settings_for(db, user_id), category):  # push follows the category switches, like email
-        body = n.room_name if n.room_name and n.room_name not in n.title else None  # titles usually name the room
+        if data and data.get("preview"):
+            body = data["preview"]  # a mention: show what was said
+        else:
+            body = n.room_name if n.room_name and n.room_name not in n.title else None  # titles usually name the room
         push_service.queue(db, user_id, title=n.title, body=body, url=target_path(n), tag=str(n.id))
     return n
 
@@ -142,6 +146,8 @@ def target_path(n: Notification) -> str:
     if not n.room_id or n.type in ("room_deleted", "removed_from_room"):
         return "/notifications"
     room = f"/rooms/{n.room_id}"
+    if n.type == "mentioned":
+        return f"{room}/chat"
     if n.type in ("join_requested", "proposal_submitted"):
         return f"{room}/requests"
     if n.type == "stages_unassigned":
@@ -150,6 +156,35 @@ def target_path(n: Notification) -> str:
     if n.task_id:
         return f"{room}/tasks/{n.task_id}"
     return room
+
+
+PREVIEW = 140  # characters of a message shown in a notification
+
+
+def preview(text: str) -> str:
+    flat = " ".join(text.split())
+    return flat if len(flat) <= PREVIEW else flat[: PREVIEW - 1].rstrip() + "…"
+
+
+def chat_message(db: Session, room, sender: User, message_id, body: str, mentioned: set) -> None:
+    """A new chat message. Mentioned people get a notification (bell, email and push by their switches);
+    everyone else who chose "every message" gets a push only. Never the sender, never a muted room."""
+    short = preview(body)
+    for user_id in mentioned:
+        notify(db, user_id, "mentioned", f"{sender.name} mentioned you in {room.name}", room=room, actor=sender,
+               data={"message_id": str(message_id), "preview": short})
+    if not get_settings().push_enabled:
+        return
+    others = set(db.scalars(
+        select(NotificationSettings.user_id)
+        .join(Membership, (Membership.user_id == NotificationSettings.user_id) & (Membership.room_id == room.id))
+        .where(NotificationSettings.all_messages.is_(True), Membership.status == MembershipStatus.ACTIVE)
+    )) - mentioned - {sender.id}
+    for user_id in others:
+        if not is_muted(db, user_id, room.id):
+            # one pop-up per room: each new message replaces the last (same tag) and alerts again
+            push_service.queue(db, user_id, title=f"{sender.name} in {room.name}", body=short,
+                               url=f"/rooms/{room.id}/chat", tag=f"chat:{room.id}")
 
 
 def _clear_cache(session) -> None:

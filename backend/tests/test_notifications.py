@@ -333,7 +333,7 @@ def test_old_notifications_are_cleaned_up_after_90_days(client, db, team):
 def test_settings_default_on_and_partial_updates(client, team):
     r = client.get(f"{API}/me/notification-settings", headers=team.femi).json()
     assert r == {"email_enabled": True, "requests": True, "decisions": True, "assignments": True,
-                 "daily_digest": True, "muted_rooms": []}
+                 "daily_digest": True, "mentions": True, "all_messages": False, "muted_rooms": []}
     assert settings(client, team.femi, daily_digest=False)["daily_digest"] is False
     after = settings(client, team.femi, assignments=False)
     assert (after["daily_digest"], after["assignments"], after["requests"]) == (False, False, True)

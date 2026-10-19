@@ -110,6 +110,7 @@ class MessageOut(BaseModel):
     body: str | None
     task: Ref | None
     stage: Ref | None
+    mentions: list[UserBrief] = Field(default_factory=list, description="People @mentioned; the body shows them as @Name.")
     event: MessageEvent | None
     created_at: datetime
     deleted: bool
@@ -126,6 +127,10 @@ class MessageCreate(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
     task_id: uuid.UUID | None = None
     stage_id: uuid.UUID | None = None
+    mention_ids: list[uuid.UUID] = Field(
+        default_factory=list, max_length=50,
+        description="People picked from the @ list. Kept only if they're active members and their @Name is still in the body.",
+    )
 
     @field_validator("body")
     @classmethod

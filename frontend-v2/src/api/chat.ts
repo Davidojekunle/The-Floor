@@ -31,6 +31,7 @@ export type Message = {
   body: string | null // null when deleted
   task: Ref | null // titles as they are now; null if deleted since
   stage: Ref | null
+  mentions: UserBrief[] // shown in the body as @Name
   event: ChatEvent | null
   created_at: string
   deleted: boolean
@@ -54,7 +55,7 @@ type ListOptions = { before?: string; after?: string; limit?: number; task_id?: 
 export const listMessages = (roomId: string, opts: ListOptions = {}) =>
   apiRequest<MessagePage>(`/rooms/${roomId}/messages`, { query: { limit: 50, ...opts } })
 
-export const sendMessage = (roomId: string, body: { body: string; task_id?: string; stage_id?: string }) =>
+export const sendMessage = (roomId: string, body: { body: string; task_id?: string; stage_id?: string; mention_ids?: string[] }) =>
   apiRequest<Message>(`/rooms/${roomId}/messages`, { method: 'POST', body })
 
 /** Soft delete: the message stays in place as "deleted". Safe to repeat. */
