@@ -182,3 +182,73 @@ code {
   background: #f5f6fa;
   border-radius: 8px;
 }
+
+.progress {
+  height: 10px;
+  background: #e3e6ee;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #3b5bdb;
+}
+
+.task-card,
+.stage {
+  background: #fff;
+  border: 1px solid #e3e6ee;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.task-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stage.locked {
+  opacity: 0.6;
+  background: #f1f3f5;
+}
+
+.stage.blocked {
+  border-color: #c62828;
+  background: #fff5f5;
+}
+
+.stage.done {
+  border-color: #2f9e44;
+}
+
+.badge {
+  margin-left: 0.3rem;
+}
+
+.badge.overdue,
+.badge.blocked,
+.badge.status-blocked {
+  background: #ffe3e3;
+  color: #c62828;
+}
+
+.badge.done,
+.badge.status-done {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+
+.badge.mine {
+  background: #e7ecff;
+  color: #2b3fa8;
+}
+
+.badge.status-in_progress {
+  background: #fff3bf;
+  color: #8a6d00;
+}
