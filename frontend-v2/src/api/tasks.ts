@@ -28,6 +28,9 @@ export type Stage = {
   nudge: { at: string; by: UserBrief | null; kind: 'update' | 'block'; note: string | null; open: boolean } | null
   nudge_kind: 'update' | 'block' | null // heads only: what a nudge would be now (late/stuck, or blocked)
   can_nudge: boolean // heads only, and not nudged in the last day
+  /** A link to the finished work. Everyone in the room sees it. */
+  result: { url: string; note: string | null; by: UserBrief | null; at: string } | null
+  can_set_result: boolean // done, and you're on it or can edit stages
 }
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
@@ -165,11 +168,16 @@ export const setStageStatus = (
   stageId: string,
   status: Exclude<StageStatus, 'locked'>,
   blockedReason?: string,
+  result?: { url: string; note?: string },
 ) =>
   apiRequest<TaskDetail>(`/rooms/${roomId}/tasks/${taskId}/stages/${stageId}/status`, {
     method: 'PUT',
-    body: { status, blocked_reason: blockedReason ?? null },
+    body: { status, blocked_reason: blockedReason ?? null, ...(result ? { result_url: result.url, result_note: result.note || null } : {}) },
   })
+
+/** Add, change or (url null) remove a done stage's result. */
+export const setStageResult = (roomId: string, taskId: string, stageId: string, url: string | null, note: string | null) =>
+  apiRequest<TaskDetail>(`/rooms/${roomId}/tasks/${taskId}/stages/${stageId}/result`, { method: 'PUT', body: { url, note } })
 
 export const listTemplates = (roomId: string) => apiRequest<Paginated<Template>>(`/rooms/${roomId}/templates`)
 

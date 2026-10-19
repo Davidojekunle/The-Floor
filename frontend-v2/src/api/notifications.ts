@@ -38,6 +38,8 @@ export type Notification = {
     preview?: string // mentioned: what was said
     note?: string | null // nudged: the head's optional note
     kind?: 'update' | 'block' // nudged
+    result_url?: string // stage_ready: the finished work from the stage before
+    result_stage?: string
     message_id?: string
     stages?: { task_id: string; task_title: string; stage_id: string; stage_title: string }[]
   } | null

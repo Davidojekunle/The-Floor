@@ -559,6 +559,14 @@ function SystemLine({ m, at, onReply }: { m: Message; at: string; onReply: () =>
         ) : (
           body
         )}
+        {m.event?.type === 'stage_done' && typeof m.event.detail?.result_url === 'string' && (
+          <>
+            {' · '}
+            <a className="sys-link" href={m.event.detail.result_url} target="_blank" rel="noopener noreferrer">
+              See the result
+            </a>
+          </>
+        )}
       </div>
       <time>{at}</time>
       {!m.deleted && (

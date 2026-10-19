@@ -24,6 +24,7 @@
 - Tasks are split into 1 to 30 stages, each with a person or a tag and an optional due date. Stages can also run side by side.
 - Stages unlock in order automatically. Heads can unlock one early, or reopen finished work.
 - Mark a stage in progress, done, or **blocked** with a reason. Post progress updates with links.
+- When a stage is done, link its **result** (YouTube, Google Drive or Docs, Canva, Instagram, TikTok, Vimeo, Loom, or a direct image or video). The next person gets it with their turn, and the task's **Work so far** plays each result in place. Players load only when someone taps them.
 - Members **propose** tasks, and heads approve them or send them back with a note.
 - **Templates** for the stages a team always uses.
 

@@ -15,7 +15,7 @@ from app.core.errors import (
 from app.models.enums import StageStatus
 from app.models.task import Stage, StageAssignee
 from app.permissions.rules import RoomContext, can
-from app.schemas.task import StageCreate, StageUpdate, StatusUpdate, TaskDetail
+from app.schemas.task import ResultIn, StageCreate, StageUpdate, StatusUpdate, TaskDetail
 from app.services import chat_service
 from app.services import notification_service as notes
 from app.realtime import events as live
@@ -178,6 +178,10 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
         raise ValidationFailed(INVALID, fields={"blocked_reason": "A reason is required when blocking a stage."})
 
     if new == stage.status:
+        if new == StageStatus.DONE and body.result_url:  # "done" again with a link: just save the result
+            _save_result(stage, body.result_url, body.result_note, ctx.membership.user_id)
+            live.task_changed(db, task)
+            db.commit()
         return common.build_detail(db, ctx, task, stages)  # repeating the same status is safe
 
     allowed = logic.allowed_statuses(
@@ -195,6 +199,8 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
 
     old = stage.status
     logic.apply_status(stage, new, body.blocked_reason, ctx.membership.user_id, utcnow())
+    if new == StageStatus.DONE and body.result_url:
+        _save_result(stage, body.result_url, body.result_note, ctx.membership.user_id)
     if participant:
         from app.services import nudge_service
 
@@ -205,7 +211,7 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
         db, room_id=ctx.room.id, event=event, actor_id=ctx.membership.user_id, task=task, **kw
     )
     if new == StageStatus.DONE:
-        post("stage_done", stage=stage)
+        post("stage_done", stage=stage, detail={"result_url": stage.result_url} if stage.result_url else None)
         if logic.summarize(stages).status == "done":
             post("task_completed")
     elif new == StageStatus.BLOCKED:
@@ -213,6 +219,31 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
     elif old == StageStatus.DONE and new == StageStatus.IN_PROGRESS:
         post("stage_reopened", stage=stage)
     return _finish(db, ctx, task, stages, before)
+
+
+def _save_result(stage: Stage, url: str | None, note: str | None, actor_id) -> None:
+    stage.result_url = url
+    stage.result_note = note if url else None
+    stage.result_by = actor_id if url else None
+    stage.result_at = utcnow() if url else None
+
+
+def set_result(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, body: ResultIn) -> TaskDetail:
+    """Add, change or remove the link to a done stage's finished work. The people on it, or heads."""
+    task = common.load_task(db, ctx, task_id)
+    stages = common.load_stages(db, task.id)
+    stage = stages[_find(stages, stage_id)]
+    if not common.is_approved(task):
+        raise TaskNotApproved("Work can't start until this task is approved.")
+    if not (stage.id in common.my_stage_ids(db, ctx, stages) or can(ctx, "stage.edit")):
+        raise Forbidden("You're not assigned to this stage.")
+    if stage.status != StageStatus.DONE:
+        raise InvalidTransition("Mark the stage done first. Share work in progress as an update.")
+    _save_result(stage, body.url, body.note, ctx.membership.user_id)
+    common.touch(task)
+    live.task_changed(db, task)
+    db.commit()
+    return common.build_detail(db, ctx, task, stages)
 
 
 # ------------------------------------------------------------------ delete

@@ -64,6 +64,12 @@ class Stage(Base):
     nudge_note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     nudge_open: Mapped[bool] = mapped_column(Boolean, default=False)  # true until someone on the stage answers
 
+    # the finished work: a link to what this stage produced (a video, a design, a doc), shown on the task
+    result_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    result_note: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    result_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    result_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # automatic reminders: the effective due date each one was sent for (a changed due date re-arms them)
     reminded_soon_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminded_overdue_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

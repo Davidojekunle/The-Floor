@@ -14,7 +14,7 @@ from app.models.user import User
 from app.permissions.rules import RoomContext, can
 from app.schemas.member import TagBrief
 from app.schemas.room import UserBrief
-from app.schemas.task import NudgeOut, StageOut, TaskDetail, TaskListItem
+from app.schemas.task import NudgeOut, ResultOut, StageOut, TaskDetail, TaskListItem
 from app.services import stage_logic as logic
 from app.utils.time import as_utc, utcnow
 
@@ -234,6 +234,7 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
 
     user_ids = {task.created_by} | {s.completed_by for s in stages if s.completed_by}
     user_ids |= {s.last_nudged_by for s in stages if s.last_nudged_by}
+    user_ids |= {s.result_by for s in stages if s.result_by}
     user_ids |= {uid for uid in (task.approved_by, task.decided_by) if uid}
     users = {u.id: u for u in db.scalars(select(User).where(User.id.in_(user_ids)))}
 
@@ -292,6 +293,9 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
                 allowed_statuses=allowed,
                 can_update_status=bool(allowed),
                 update_count=update_counts.get(s.id, 0),
+                result=ResultOut(url=s.result_url, note=s.result_note, by=brief(s.result_by), at=as_utc(s.result_at))
+                if s.result_url else None,
+                can_set_result=approved and s.status == StageStatus.DONE and (s.id in mine or can_edit),
                 nudge=nudge,
                 nudge_kind=nudge_kind,
                 can_nudge=nudge_kind is not None and not nudge_service.nudged_recently(s, now),

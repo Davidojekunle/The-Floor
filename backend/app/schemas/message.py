@@ -42,9 +42,13 @@ class TaskApprovedEvent(_Event):
     detail: None = None
 
 
+class StageDoneDetail(BaseModel):
+    result_url: str  # a link to the finished work, when one was added
+
+
 class StageDoneEvent(_Event):
     type: Literal["stage_done"]
-    detail: None = None
+    detail: StageDoneDetail | None = None
 
 
 class StageBlockedEvent(_Event):

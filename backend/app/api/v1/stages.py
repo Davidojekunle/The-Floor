@@ -9,7 +9,7 @@ from app.api.deps import get_room_context
 from app.db.session import get_db
 from app.permissions.rules import RoomContext
 from app.core.openapi import err
-from app.schemas.task import NudgeIn, StageCreate, StageUpdate, StatusUpdate, TaskDetail
+from app.schemas.task import NudgeIn, ResultIn, StageCreate, StageUpdate, StatusUpdate, TaskDetail
 from app.schemas.progress import UpdateCreate, UpdateOut, UpdatePage
 from app.services import nudge_service, progress_service, stage_service
 
@@ -77,6 +77,22 @@ def acknowledge_nudge(
 ):
     """“I'm on it”: starts a To do stage, or answers the nudge on one already in progress."""
     return nudge_service.acknowledge(db, ctx, task_id, stage_id)
+
+
+@router.put(
+    "/{stage_id}/result",
+    response_model=TaskDetail,
+    responses={403: err("You're not on this stage."), 409: err("The stage isn't done yet.")},
+)
+def set_stage_result(
+    task_id: uuid.UUID,
+    stage_id: uuid.UUID,
+    body: ResultIn,
+    ctx: RoomContext = Depends(get_room_context),
+    db: Session = Depends(get_db),
+):
+    """Add, change or remove (url null) the link to a done stage's finished work."""
+    return stage_service.set_result(db, ctx, task_id, stage_id, body)
 
 
 # ------------------------------------------------------------------ progress updates (phase 6b)

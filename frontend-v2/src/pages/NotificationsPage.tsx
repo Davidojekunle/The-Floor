@@ -160,6 +160,8 @@ function NotificationRow({ n }: { n: Notification }) {
       <span className="quote">{n.data.note}</span>
     ) : n.type === 'mentioned' && n.data?.preview ? (
       <span className="quote">{n.data.preview}</span>
+    ) : n.type === 'stage_ready' && n.data?.result_stage ? (
+      <span className="meta">The result of {n.data.result_stage} is on the task</span>
     ) : n.type === 'proposal_rejected' && n.data?.reason ? (
       <span className="quote">{n.data.reason}</span>
     ) : n.type === 'temp_head_granted' && n.data?.expires_at ? (

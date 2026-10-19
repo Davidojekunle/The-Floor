@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
+from urllib.parse import urlparse
+
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.common import Page, UtcDateTime
@@ -23,6 +25,14 @@ def _clean(v: str | None, what: str) -> str | None:
 
 
 # ------------------------------------------------------------------ output
+
+class ResultOut(BaseModel):
+    """What a stage produced: a link to the finished work. Everyone in the room can see it."""
+    url: str
+    note: str | None
+    by: UserBrief | None
+    at: datetime
+
 
 class NudgeOut(BaseModel):
     """The last nudge on a stage. Shown to the people on it and to heads."""
@@ -56,6 +66,8 @@ class StageOut(BaseModel):
     allowed_statuses: list[StageStatusName]
     can_update_status: bool
     update_count: int = 0  # progress updates posted on this stage
+    result: ResultOut | None = None
+    can_set_result: bool = Field(False, description="Done, and you're on it or can edit stages: you can add or change the result.")
     nudge: NudgeOut | None = None
     nudge_kind: Literal["update", "block"] | None = Field(
         None, description="What a nudge would be now (heads only): update = late or stuck 3+ days, block = blocked.")
@@ -184,9 +196,51 @@ class StageUpdate(BaseModel):
         return _clean(v, "Title")
 
 
+def _web_link(v: str | None) -> str | None:
+    if v is None or not v.strip():
+        return None
+    v = v.strip()
+    parsed = urlparse(v)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError("Use a web link starting with http:// or https://.")
+    return v
+
+
+def _clean_note(v: str | None) -> str | None:
+    return (v or "").strip() or None
+
+
 class StatusUpdate(BaseModel):
     status: Literal["todo", "in_progress", "done", "blocked"]
     blocked_reason: str | None = Field(None, max_length=300)
+    result_url: str | None = Field(None, max_length=2000, description="With done: a link to the finished work. Optional.")
+    result_note: str | None = Field(None, max_length=300)
+
+    @field_validator("result_url")
+    @classmethod
+    def web_link_only(cls, v):
+        return _web_link(v)
+
+    @field_validator("result_note")
+    @classmethod
+    def strip_note(cls, v):
+        return _clean_note(v)
+
+
+class ResultIn(BaseModel):
+    """Add, change or (with url null) remove a done stage's result."""
+    url: str | None = Field(None, max_length=2000)
+    note: str | None = Field(None, max_length=300)
+
+    @field_validator("url")
+    @classmethod
+    def web_link_only(cls, v):
+        return _web_link(v)
+
+    @field_validator("note")
+    @classmethod
+    def strip_note(cls, v):
+        return _clean_note(v)
 
 
 # ------------------------------------------------------------------ My Tasks (across rooms)

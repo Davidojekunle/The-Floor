@@ -6,6 +6,7 @@ import { deleteUpdate, listStageUpdates, listTaskUpdates, postUpdate, type Progr
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/Dialog'
 import { Icon } from '../components/Icon'
+import { shortLink } from '../lib/embed'
 import { Menu } from '../components/Menu'
 import { useToast } from '../components/toastContext'
 import { formatDay, relativeTime } from '../lib/dates'
@@ -327,13 +328,3 @@ function linkProblem(value: string): string | undefined {
 }
 
 /** "docs.google.com/document/d/1x…" */
-function shortLink(url: string): string {
-  try {
-    const u = new URL(url)
-    const rest = `${u.pathname}${u.search}`.replace(/\/$/, '')
-    const text = `${u.hostname.replace(/^www\./, '')}${rest}`
-    return text.length > 60 ? `${text.slice(0, 57)}…` : text
-  } catch {
-    return url
-  }
-}

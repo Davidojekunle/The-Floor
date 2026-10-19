@@ -11,6 +11,7 @@ import { useToast } from '../components/toastContext'
 import { PRIMARY_TRANSITION, TRANSITION_LABEL } from '../lib/labels'
 import { useAuth } from '../auth/useAuth'
 import { useActionError } from './useRoomError'
+import { DoneDialog } from './StageResult'
 
 /**
  * Buttons for one stage. Only what the server lists in allowed_statuses is shown:
@@ -22,10 +23,11 @@ export function StageActions({ roomId, taskId, stage }: { roomId: string; taskId
   const toast = useToast()
   const onError = useActionError(roomId)
   const [blocking, setBlocking] = useState(false)
+  const [finishing, setFinishing] = useState(false)
 
   const mutation = useMutation({
-    mutationFn: (v: { to: Exclude<StageStatus, 'locked'>; reason?: string }) =>
-      setStageStatus(roomId, taskId, stage.id, v.to, v.reason),
+    mutationFn: (v: { to: Exclude<StageStatus, 'locked'>; reason?: string; result?: { url: string; note?: string } }) =>
+      setStageStatus(roomId, taskId, stage.id, v.to, v.reason, v.result),
     onSuccess: (updated, v) => {
       // The response is the whole task, so the detail cache is updated without refetching it.
       queryClient.setQueryData(['task', roomId, taskId], updated)
@@ -33,6 +35,7 @@ export function StageActions({ roomId, taskId, stage }: { roomId: string; taskId
       void queryClient.invalidateQueries({ queryKey: ['me-tasks'] })
       void refreshUser() // "for you" counts
       setBlocking(false)
+      setFinishing(false)
       toast(statusToast(updated, stage, v.to))
     },
     onError: (err) => toast(onError(err)),
@@ -43,7 +46,8 @@ export function StageActions({ roomId, taskId, stage }: { roomId: string; taskId
 
   const primary = PRIMARY_TRANSITION[stage.status]
   const rest = allowed.filter((to) => to !== primary)
-  const run = (to: StageStatus) => (to === 'blocked' ? setBlocking(true) : mutation.mutate({ to: to as Exclude<StageStatus, 'locked'> }))
+  const run = (to: StageStatus) =>
+    to === 'blocked' ? setBlocking(true) : to === 'done' ? setFinishing(true) : mutation.mutate({ to: to as Exclude<StageStatus, 'locked'> })
   const label = (to: StageStatus) => TRANSITION_LABEL[`${stage.status}>${to}`] ?? to
 
   return (
@@ -61,6 +65,14 @@ export function StageActions({ roomId, taskId, stage }: { roomId: string; taskId
       )}
       {rest.length > 0 && (
         <Menu label={`More actions for ${stage.title}`} items={rest.map((to) => ({ label: label(to), onSelect: () => run(to) }))} />
+      )}
+      {finishing && (
+        <DoneDialog
+          stage={stage}
+          pending={mutation.isPending}
+          onClose={() => setFinishing(false)}
+          onDone={(url, note) => mutation.mutate({ to: 'done', result: url ? { url, note } : undefined })}
+        />
       )}
       {blocking && (
         <BlockDialog

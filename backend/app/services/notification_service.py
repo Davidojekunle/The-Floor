@@ -142,6 +142,8 @@ def notify(db: Session, user_id, type_: str, title: str, *, room=None, task=None
             body = data["preview"]  # a mention: show what was said
         elif data and data.get("note"):
             body = data["note"]  # a nudge with a note
+        elif data and data.get("result_stage"):
+            body = f"The result of “{data['result_stage']}” is attached."
         else:
             body = n.room_name if n.room_name and n.room_name not in n.title else None  # titles usually name the room
         push_service.queue(db, user_id, title=n.title, body=body, url=target_path(n), tag=str(n.id))
@@ -339,6 +341,15 @@ def snapshot(db: Session, stages: list[Stage]) -> dict:
     return {s.id: (s.status, frozenset(assignees[s.id])) for s in stages}
 
 
+def _handed_over(stages: list[Stage], ready: Stage) -> dict | None:
+    """The latest finished result from the stages before this one: what the next person picks up."""
+    earlier = [s for s in stages if s.position < ready.position and s.status == StageStatus.DONE and s.result_url]
+    if not earlier:
+        return None
+    last = max(earlier, key=lambda s: s.position)
+    return {"result_url": last.result_url, "result_stage": last.title}
+
+
 def stage_changes(db: Session, ctx: RoomContext, task: Task, stages: list[Stage], before: dict) -> None:
     """After a change: stage_ready to everyone on a stage that just became todo, otherwise stage_assigned
     to people newly assigned. One per person per stage. Nothing while the task is still a proposal."""
@@ -353,9 +364,10 @@ def stage_changes(db: Session, ctx: RoomContext, task: Task, stages: list[Stage]
         if s.status == StageStatus.TODO and prev_status != StageStatus.TODO:
             if participants is None:
                 participants = _participants(db, ctx.room.id, stages)
+            handed = _handed_over(stages, s)
             for uid in participants[s.id]:
                 notify(db, uid, "stage_ready", f"“{s.title}” on “{task.title}” is ready for you",
-                       room=ctx.room, task=task, stage=s, actor=actor)
+                       room=ctx.room, task=task, stage=s, actor=actor, data=handed)
         elif s.status != StageStatus.DONE:
             for uid in now_assigned[s.id] - prev_assigned:
                 notify(db, uid, "stage_assigned", f"{actor.name} assigned you to “{s.title}” on “{task.title}”",

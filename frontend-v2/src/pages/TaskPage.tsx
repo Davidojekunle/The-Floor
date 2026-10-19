@@ -25,6 +25,7 @@ import { StageActions } from '../room/StageActions'
 import { NudgeBanner, NudgeButton } from '../room/NudgeControls'
 import { googleCalendarEventUrl, openInNewTab } from '../lib/googleCalendar'
 import { StageUpdates, TaskUpdatesFeed } from '../room/StageUpdates'
+import { StageResultLine, WorkSoFar } from '../room/StageResult'
 import { useRoomError } from '../room/useRoomError'
 
 export function TaskPage() {
@@ -165,6 +166,7 @@ export function TaskPage() {
         </ol>
       </section>
 
+      {!isProposal && <WorkSoFar task={t} />}
       {!isProposal && <TaskUpdatesFeed task={t} />}
 
       {confirmDelete && (
@@ -438,6 +440,7 @@ function StageItem({ task, stage: s, previous, tz, planned }: { task: TaskDetail
           )}
         </div>
         {s.status === 'blocked' && s.blocked_reason && <div className="reason">{s.blocked_reason}</div>}
+        {!planned && <StageResultLine task={task} stage={s} />}
         {!planned && <NudgeBanner task={task} stage={s} />}
         {!planned && isModerator && s.nudge_kind && (
           <div className="stage-actions">

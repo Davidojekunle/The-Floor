@@ -96,6 +96,8 @@ def _detail(n: Notification) -> list[str]:
         return [f"“{n.data['note']}”"]
     if n.type in ("mentioned", "replied") and n.data and n.data.get("preview"):
         return [f"“{n.data['preview']}”"]
+    if n.type == "stage_ready" and n.data and n.data.get("result_url"):
+        return [f"The result of “{n.data['result_stage']}”: {n.data['result_url']}"]
     if n.type == "proposal_rejected" and n.data and n.data.get("reason"):
         return [f"Reason: {n.data['reason']}"]
     if n.type == "stages_unassigned" and n.data:
