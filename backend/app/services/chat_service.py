@@ -13,7 +13,7 @@ from app.models.room import Membership
 from app.models.task import Stage, Task
 from app.models.user import User
 from app.permissions.rules import RoomContext, can, require
-from app.schemas.message import EVENT_MODELS, MessageCreate, MessageOut, MessagePage, Ref
+from app.schemas.message import EVENT_MODELS, MessageCreate, MessageOut, MessagePage, Ref, ReplyQuote
 from app.schemas.room import UserBrief
 from app.services import notification_service as notes
 from app.services import task_common
@@ -130,9 +130,22 @@ def _mention_ids(m: Message) -> list[uuid.UUID]:
     return out
 
 
+def _quote(original: Message | None, users: dict) -> ReplyQuote | None:
+    if original is None:
+        return None
+    gone = original.deleted_at is not None
+    return ReplyQuote(
+        id=original.id, type=original.type, sender=users.get(original.sender_id), deleted=gone,
+        preview=None if gone or not original.body else notes.preview(original.body),
+    )
+
+
 def build(db: Session, ctx: RoomContext, messages: list[Message]) -> list[MessageOut]:
     user_ids = {uid for m in messages for uid in (m.sender_id, m.event_actor_id, m.event_subject_id) if uid}
     user_ids |= {uid for m in messages if m.deleted_at is None for uid in _mention_ids(m)}
+    reply_ids = {m.reply_to_id for m in messages if m.reply_to_id and m.deleted_at is None}
+    originals = {o.id: o for o in db.scalars(select(Message).where(Message.id.in_(reply_ids)))} if reply_ids else {}
+    user_ids |= {o.sender_id for o in originals.values() if o.sender_id}
     users = {u.id: UserBrief(id=u.id, name=u.name) for u in db.scalars(select(User).where(User.id.in_(user_ids)))} if user_ids else {}
     task_ids = {m.task_id for m in messages if m.task_id}
     tasks = {
@@ -167,6 +180,7 @@ def build(db: Session, ctx: RoomContext, messages: list[Message]) -> list[Messag
                 task=Ref(id=task.id, title=task.title) if task else None,
                 stage=Ref(id=stage.id, title=stage.title) if stage else None,
                 mentions=[] if deleted else [users[u] for u in _mention_ids(m) if u in users],
+                reply_to=_quote(originals.get(m.reply_to_id), users) if not deleted else None,
                 event=event,
                 created_at=as_utc(m.created_at),
                 deleted=deleted,
@@ -253,6 +267,13 @@ def send_message(db: Session, ctx: RoomContext, body: MessageCreate) -> MessageO
     if errors:
         raise ValidationFailed(INVALID, fields=errors)
     mentioned = _resolve_mentions(db, ctx, body)
+    original = None
+    if body.reply_to_id is not None:
+        original = db.get(Message, body.reply_to_id)
+        if original is None or original.room_id != ctx.room.id:
+            raise ValidationFailed(INVALID, fields={"reply_to_id": "Unknown message in this room."})
+        if original.deleted_at is not None:
+            raise ValidationFailed(INVALID, fields={"reply_to_id": "That message was deleted."})
 
     message = Message(
         room_id=ctx.room.id,
@@ -262,12 +283,15 @@ def send_message(db: Session, ctx: RoomContext, body: MessageCreate) -> MessageO
         task_id=task.id if task else None,
         stage_id=stage.id if stage else None,
         mentions=[str(u.id) for u in mentioned] or None,
+        reply_to_id=original.id if original else None,
         created_at=_now(db),
     )
     db.add(message)
     db.flush()
     live.message_created(db, ctx.room.id, message.id)
-    notes.chat_message(db, ctx.room, _user(db, ctx.membership.user_id), message.id, body.body, {u.id for u in mentioned})
+    replied_to = original.sender_id if original is not None and original.type == MessageType.USER else None
+    notes.chat_message(db, ctx.room, _user(db, ctx.membership.user_id), message.id, body.body,
+                       {u.id for u in mentioned}, replied_to=replied_to)
     db.commit()
     return build(db, ctx, [message])[0]
 

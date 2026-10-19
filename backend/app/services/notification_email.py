@@ -75,7 +75,7 @@ def _send(db: Session, user: User, category: str, subject: str, title: str, para
 def link(n: Notification) -> str:
     base = get_settings().frontend_url.rstrip("/")
     if n.room_id and n.type not in _GONE:
-        if n.type == "mentioned":
+        if n.type in ("mentioned", "replied"):
             return f"{base}/rooms/{n.room_id}/chat"
         if n.task_id:
             return f"{base}/rooms/{n.room_id}/tasks/{n.task_id}"
@@ -92,7 +92,7 @@ GROUP_SUBJECT = {
 
 
 def _detail(n: Notification) -> list[str]:
-    if n.type == "mentioned" and n.data and n.data.get("preview"):
+    if n.type in ("mentioned", "replied") and n.data and n.data.get("preview"):
         return [f"“{n.data['preview']}”"]
     if n.type == "proposal_rejected" and n.data and n.data.get("reason"):
         return [f"Reason: {n.data['reason']}"]

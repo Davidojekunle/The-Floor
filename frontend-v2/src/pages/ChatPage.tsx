@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { markMessagesRead, type Message, type Ref } from '../api/chat'
+import { markMessagesRead, type Message, type Ref, type ReplyQuote } from '../api/chat'
 import type { UserBrief } from '../api/rooms'
 import { listMembers } from '../api/members'
 import { getTask, listTasks } from '../api/tasks'
@@ -10,6 +10,7 @@ import { Avatar } from '../components/Avatar'
 import { ConfirmDialog, Dialog } from '../components/Dialog'
 import { Icon } from '../components/Icon'
 import { Menu } from '../components/Menu'
+import { SwipeToReply } from '../components/SwipeToReply'
 import { useToast } from '../components/toastContext'
 import { dayKey, formatDay } from '../lib/dates'
 import { useTimezone } from '../lib/useTimezone'
@@ -45,6 +46,8 @@ function ChatView() {
   const [picked, setPicked] = useState<Map<string, string>>(() => new Map()) // user id -> name
   const [query, setQuery] = useState<{ text: string; start: number } | null>(null)
   const [active, setActive] = useState(0)
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const jumpTarget = useRef<string | null>(null) // a quoted message we're scrolling back to
 
   const [draft, setDraft] = useState('')
   const [link, setLink] = useState<{ task: Ref; stage: Ref | null } | null>(null)
@@ -74,6 +77,11 @@ function ChatView() {
     if (mineJustSent) el.scrollTop = el.scrollHeight
     seenCount.current = chat.items.length
   }, [chat.items, user?.id])
+
+  // A jump to a quoted message that wasn't loaded yet: look again each time older messages arrive.
+  useEffect(() => {
+    if (jumpTarget.current && !chat.loadingOlder) findJumpTarget()
+  })
 
   // Mark read up to the newest message the reader has actually seen at the bottom, then refresh the badges.
   const markSeen = () => {
@@ -108,9 +116,10 @@ function ChatView() {
     if (!body) return
     // A pick counts only while its @Name is still in the text (deleting it un-mentions them).
     const mentions = [...picked].filter(([, name]) => body.includes(`@${name}`)).map(([id, name]) => ({ id, name }))
-    const sent = { body, task: link?.task ?? null, stage: link?.stage ?? null, mentions }
+    const sent = { body, task: link?.task ?? null, stage: link?.stage ?? null, mentions, replyTo: replyTo ? quoteOf(replyTo) : null }
     setDraft('')
     setLink(null)
+    setReplyTo(null)
     setPicked(new Map())
     setQuery(null)
     typing.stopped()
@@ -120,6 +129,40 @@ function ChatView() {
     if (!result.ok && result.linkGone) {
       setDraft(body)
       toast(result.message)
+    }
+  }
+
+  function startReply(m: Message) {
+    setReplyTo(m)
+    input.current?.focus()
+  }
+
+  /** Scroll to a quoted message, loading older pages until it's there, then flash it. */
+  function jumpTo(id: string) {
+    jumpTarget.current = id
+    findJumpTarget()
+  }
+
+  function findJumpTarget() {
+    const id = jumpTarget.current
+    const el = id ? log.current?.querySelector<HTMLElement>(`[data-mid="${id}"]`) : null
+    if (el) {
+      jumpTarget.current = null
+      el.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+      el.classList.remove('flash')
+      void el.offsetWidth // restart the highlight if it's already running
+      el.classList.add('flash')
+      return
+    }
+    if (!id) return
+    if (chat.hasOlder) {
+      if (!chat.loadingOlder) {
+        keepOffset.current = log.current?.scrollHeight ?? null
+        void chat.loadOlder()
+      }
+    } else {
+      jumpTarget.current = null
+      toast("That message isn't in this chat any more.")
     }
   }
 
@@ -142,6 +185,11 @@ function ChatView() {
         setQuery(null)
         return
       }
+    }
+    if (e.key === 'Escape' && replyTo) {
+      e.preventDefault()
+      setReplyTo(null)
+      return
     }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
@@ -251,6 +299,8 @@ function ChatView() {
             onDelete={setDeleting}
             onRetry={(m) => void chat.retry(m)}
             onDiscard={chat.discard}
+            onReply={startReply}
+            onJump={jumpTo}
           />
         </div>
         {newBelow > 0 && (
@@ -262,6 +312,18 @@ function ChatView() {
 
       <div className="composer">
         <div className="composer-box">
+          {replyTo && (
+            <div className="reply-bar">
+              <Icon name="reply" size={14} />
+              <span className="reply-bar-text">
+                Replying to <strong>{replyTo.sender?.name ?? 'an update'}</strong>
+                <span className="reply-bar-quote">{oneLine(replyTo.body ?? '')}</span>
+              </span>
+              <button className="icon-btn" type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => setReplyTo(null)} aria-label="Cancel reply">
+                <Icon name="x" />
+              </button>
+            </div>
+          )}
           {link && (
             <span className="ref-chip">
               ↳ {link.task.title}
@@ -407,8 +469,10 @@ function MessageList(props: {
   onDelete: (m: Message) => void
   onRetry: (m: LocalMessage) => void
   onDiscard: (m: LocalMessage) => void
+  onReply: (m: Message) => void
+  onJump: (id: string) => void
 }) {
-  const { items, tz, myId, lastReadAtOpen } = props
+  const { items, tz, myId, lastReadAtOpen, onReply } = props
   const [today] = useState(() => dayKey(new Date().toISOString(), tz))
   const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz })
   const dayLabel = (key: string, iso: string) => {
@@ -440,7 +504,11 @@ function MessageList(props: {
       prev = null
     }
     if (m.type === 'system') {
-      out.push(<SystemLine key={m.id} m={m} at={time.format(new Date(m.created_at))} />)
+      out.push(
+        <SwipeToReply key={m.id} id={m.id} enabled={!m.deleted} onReply={() => onReply(m)}>
+          <SystemLine m={m} at={time.format(new Date(m.created_at))} onReply={() => onReply(m)} />
+        </SwipeToReply>,
+      )
       prev = null
     } else {
       const cont =
@@ -449,7 +517,12 @@ function MessageList(props: {
         !prev.deleted &&
         prev.sender?.id === m.sender?.id &&
         new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() < GROUP_MS
-      out.push(<UserMessage key={m.id} m={m} cont={cont} at={time.format(new Date(m.created_at))} {...props} />)
+      const canReply = !isLocal(m) && !m.deleted
+      out.push(
+        <SwipeToReply key={m.id} id={m.id} enabled={canReply} onReply={() => onReply(m)}>
+          <UserMessage m={m} cont={cont && !m.reply_to} at={time.format(new Date(m.created_at))} {...props} />
+        </SwipeToReply>,
+      )
       prev = m
     }
     if (i === showNewAfter)
@@ -462,7 +535,7 @@ function MessageList(props: {
   return <>{out}</>
 }
 
-function SystemLine({ m, at }: { m: Message; at: string }) {
+function SystemLine({ m, at, onReply }: { m: Message; at: string; onReply: () => void }) {
   const { room } = useRoom()
   const body = m.body ?? ''
   // Turn the task's title inside the text into a link, when it's there.
@@ -488,6 +561,11 @@ function SystemLine({ m, at }: { m: Message; at: string }) {
         )}
       </div>
       <time>{at}</time>
+      {!m.deleted && (
+        <button className="icon-btn sys-reply" type="button" onClick={onReply} aria-label="Reply" title="Reply">
+          <Icon name="reply" />
+        </button>
+      )}
     </div>
   )
 }
@@ -500,8 +578,10 @@ function UserMessage(props: {
   onDelete: (m: Message) => void
   onRetry: (m: LocalMessage) => void
   onDiscard: (m: LocalMessage) => void
+  onReply: (m: Message) => void
+  onJump: (id: string) => void
 }) {
-  const { m, cont, at, myId, onDelete, onRetry, onDiscard } = props
+  const { m, cont, at, myId, onDelete, onRetry, onDiscard, onReply, onJump } = props
   const { room } = useRoom()
   const local = isLocal(m) ? m : null
   const name = m.sender?.name ?? 'Someone'
@@ -520,6 +600,7 @@ function UserMessage(props: {
             <time>{at}</time>
           </div>
         )}
+        {!m.deleted && m.reply_to && <Quote q={m.reply_to} onJump={onJump} />}
         <div className="text">
           {m.deleted ? 'This message was deleted.' : renderBody(m.body ?? '', m.mentions ?? [], myId)}
           {local && !local.failed && <span className="faint small"> Sending…</span>}
@@ -543,9 +624,14 @@ function UserMessage(props: {
           </div>
         )}
       </div>
-      {!local && m.can_delete && !m.deleted && (
+      {!local && !m.deleted && (
         <div className="msg-tools">
-          <Menu label="Message actions" items={[{ label: 'Delete message', danger: true, onSelect: () => onDelete(m) }]} />
+          <button className="icon-btn reply-btn" type="button" onClick={() => onReply(m)} aria-label="Reply" title="Reply">
+            <Icon name="reply" />
+          </button>
+          {m.can_delete && (
+            <Menu label="Message actions" items={[{ label: 'Delete message', danger: true, onSelect: () => onDelete(m) }]} />
+          )}
         </div>
       )}
     </div>
@@ -631,6 +717,26 @@ function LinkTaskDialog({ onClose, onPick }: { onClose: () => void; onPick: (l: 
       )}
     </Dialog>
   )
+}
+
+/** The quoted original above a reply. Tapping it scrolls back to it. */
+function Quote({ q, onJump }: { q: ReplyQuote; onJump: (id: string) => void }) {
+  return (
+    <button className="quote-btn" type="button" onClick={() => onJump(q.id)} aria-label={`Go to the message from ${q.sender?.name ?? 'the room'}`}>
+      <strong>{q.sender?.name ?? 'Update'}</strong>
+      <span>{q.deleted ? 'Original message was deleted' : q.preview}</span>
+    </button>
+  )
+}
+
+const oneLine = (text: string) => {
+  const flat = text.replace(/\s+/g, ' ').trim()
+  return flat.length > 140 ? `${flat.slice(0, 139).trimEnd()}…` : flat
+}
+
+/** How a reply being sent shows its original until the server's version arrives. */
+function quoteOf(m: Message): ReplyQuote {
+  return { id: m.id, type: m.type, sender: m.sender, preview: oneLine(m.body ?? ''), deleted: false }
 }
 
 /** The "@que" right before the caret, if the person is typing a mention. */

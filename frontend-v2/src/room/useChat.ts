@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
-import { deleteMessage, listMessages, sendMessage, type Message, type MessagePage, type Ref } from '../api/chat'
+import { deleteMessage, listMessages, sendMessage, type Message, type MessagePage, type Ref, type ReplyQuote } from '../api/chat'
 import type { UserBrief } from '../api/rooms'
 import { useAuth } from '../auth/useAuth'
 import { useLive, useLiveSignals } from '../live/liveContext'
@@ -13,7 +13,7 @@ const REFRESH_MS = 60000 // re-read the latest page so deletions show up
 export type LocalMessage = Message & {
   local: true
   failed: boolean
-  draft: { body: string; task: Ref | null; stage: Ref | null; mentions?: UserBrief[] }
+  draft: { body: string; task: Ref | null; stage: Ref | null; mentions?: UserBrief[]; replyTo?: ReplyQuote | null }
 }
 export type ChatItem = Message | LocalMessage
 export const isLocal = (m: ChatItem): m is LocalMessage => 'local' in m
@@ -170,6 +170,7 @@ export function useChat(roomId: string) {
           task_id: local.draft.task?.id,
           stage_id: local.draft.stage?.id,
           mention_ids: local.draft.mentions?.map((u) => u.id),
+          reply_to_id: local.draft.replyTo?.id,
         })
         // Don't move `newest` forward: messages sent by others just before ours still need polling in.
         merge([saved])
@@ -177,9 +178,16 @@ export function useChat(roomId: string) {
         return { ok: true as const }
       } catch (err) {
         const linkGone = err instanceof ApiError && !!(err.fields?.task_id || err.fields?.stage_id)
-        if (linkGone) {
+        const replyGone = err instanceof ApiError && !!err.fields?.reply_to_id
+        if (linkGone || replyGone) {
           setPending((all) => all.filter((m) => m.id !== local.id))
-          return { ok: false as const, linkGone, message: "That task can't be linked any more. Your message is back in the box." }
+          return {
+            ok: false as const,
+            linkGone: true,
+            message: replyGone
+              ? 'The message you replied to was deleted. Your message is back in the box.'
+              : "That task can't be linked any more. Your message is back in the box.",
+          }
         }
         setPending((all) => all.map((m) => (m.id === local.id ? { ...m, failed: true } : m)))
         return { ok: false as const, linkGone: false, message: onError(err) }
@@ -198,6 +206,7 @@ export function useChat(roomId: string) {
         task: draft.task,
         stage: draft.stage,
         mentions: draft.mentions ?? [],
+        reply_to: draft.replyTo ?? null,
         event: null,
         created_at: new Date().toISOString(),
         deleted: false,

@@ -38,6 +38,7 @@ CATEGORY = {
     "stage_ready": "assignments",
     "stage_assigned": "assignments",
     "mentioned": "mentions",
+    "replied": "mentions",  # a reply is a way of addressing you, so it shares the Mentions switch
 }
 TYPES = tuple(CATEGORY)
 SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest", "mentions", "all_messages")
@@ -146,7 +147,7 @@ def target_path(n: Notification) -> str:
     if not n.room_id or n.type in ("room_deleted", "removed_from_room"):
         return "/notifications"
     room = f"/rooms/{n.room_id}"
-    if n.type == "mentioned":
+    if n.type in ("mentioned", "replied"):
         return f"{room}/chat"
     if n.type in ("join_requested", "proposal_submitted"):
         return f"{room}/requests"
@@ -166,13 +167,17 @@ def preview(text: str) -> str:
     return flat if len(flat) <= PREVIEW else flat[: PREVIEW - 1].rstrip() + "…"
 
 
-def chat_message(db: Session, room, sender: User, message_id, body: str, mentioned: set) -> None:
-    """A new chat message. Mentioned people get a notification (bell, email and push by their switches);
-    everyone else who chose "every message" gets a push only. Never the sender, never a muted room."""
+def chat_message(db: Session, room, sender: User, message_id, body: str, mentioned: set, replied_to=None) -> None:
+    """A new chat message. The person replied to and the people mentioned get a notification (bell, email and
+    push by their Mentions switch), one each; everyone else who chose "every message" gets a push only.
+    Never the sender, never a muted room."""
     short = preview(body)
-    for user_id in mentioned:
-        notify(db, user_id, "mentioned", f"{sender.name} mentioned you in {room.name}", room=room, actor=sender,
-               data={"message_id": str(message_id), "preview": short})
+    data = {"message_id": str(message_id), "preview": short}
+    if replied_to is not None and replied_to != sender.id:
+        notify(db, replied_to, "replied", f"{sender.name} replied to you in {room.name}", room=room, actor=sender, data=data)
+    for user_id in mentioned - {replied_to}:
+        notify(db, user_id, "mentioned", f"{sender.name} mentioned you in {room.name}", room=room, actor=sender, data=data)
+    mentioned = mentioned | ({replied_to} if replied_to else set())
     if not get_settings().push_enabled:
         return
     others = set(db.scalars(

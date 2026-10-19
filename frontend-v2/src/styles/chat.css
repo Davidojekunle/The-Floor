@@ -11,7 +11,7 @@
 .avstack .avatar { width: 22px; height: 22px; font-size: 9px; border-radius: 6px; box-shadow: 0 0 0 2px var(--surface); }
 .avstack .avatar + .avatar { margin-left: -5px; }
 .chat-body { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
-.chat-log { flex: 1; min-height: 0; overflow-y: auto; padding: 0 0 8px; overscroll-behavior: contain; }
+.chat-log { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 0 8px; overscroll-behavior: contain; } /* x: a row being swiped never scrolls the log sideways */
 .day-line { border-top: 1px solid var(--border); margin: 26px 0 -14px; }
 .day-sep { position: sticky; top: 6px; z-index: 3; display: flex; justify-content: center; pointer-events: none; margin-bottom: 4px; }
 .day-sep span { pointer-events: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 3px 14px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
@@ -96,3 +96,28 @@
 .mention-opt { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 7px;
   background: transparent; color: var(--text); font: inherit; font-weight: 500; text-align: left; cursor: pointer; }
 .mention-opt[aria-selected='true'] { background: var(--hover); }
+
+/* Replies: swipe a row right on touch (the icon fades in behind it), the quote above a reply, the bar above the box */
+.swipe { position: relative; --swipe: 0; }
+.swipe-row { position: relative; touch-action: pan-y; will-change: transform; background: var(--chat-bg, var(--surface)); }
+.swipe-ico { position: absolute; left: 18px; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 30px; height: 30px;
+  border-radius: 50%; background: var(--accent-soft); color: var(--accent); opacity: var(--swipe); scale: calc(0.6 + var(--swipe) * 0.4); }
+.swipe.flash .swipe-row > * { animation: reply-flash 1.4s ease-out; }
+@keyframes reply-flash { 0%, 30% { background: var(--accent-soft); } 100% { background: transparent; } }
+.quote-btn { display: grid; gap: 1px; max-width: 520px; margin: 2px 0 4px; padding: 4px 10px; border: 0; border-left: 2px solid var(--border-strong);
+  border-radius: 0 6px 6px 0; background: var(--subtle); color: var(--text-2); font: inherit; font-size: 13px; text-align: left; cursor: pointer; min-width: 0; }
+.quote-btn strong { font-size: 12px; color: var(--text); }
+.quote-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) { .quote-btn:hover { border-left-color: var(--accent); } }
+.reply-bar { display: flex; align-items: center; gap: 8px; margin: 8px 8px 0; padding: 6px 4px 6px 10px; border-radius: 8px; background: var(--subtle);
+  font-size: 13px; color: var(--text-2); min-width: 0; }
+.reply-bar > svg.i { color: var(--accent); }
+.reply-bar-text { flex: 1; min-width: 0; display: grid; }
+.reply-bar-text strong { color: var(--text); font-weight: 600; }
+.reply-bar-quote { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+.reply-bar .icon-btn { width: 28px; height: 28px; }
+.sys { grid-template-columns: 36px minmax(0, 1fr) auto auto; }
+.sys-reply { width: 28px; height: 28px; visibility: hidden; }
+.sys:hover .sys-reply, .sys:focus-within .sys-reply { visibility: visible; }
+@media (hover: none) { .sys-reply { display: none; } }
+@media (hover: none) { .msg-tools .reply-btn { display: none; } } /* touch screens swipe to reply */

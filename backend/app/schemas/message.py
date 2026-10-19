@@ -103,6 +103,15 @@ EVENT_MODELS = {
 
 # ------------------------------------------------------------------ messages
 
+class ReplyQuote(BaseModel):
+    """What a reply shows of the message it answers."""
+    id: uuid.UUID
+    type: Literal["user", "system"]
+    sender: UserBrief | None = Field(description="Null for system messages.")
+    preview: str | None = Field(description="The start of its text, on one line. Null once it's deleted.")
+    deleted: bool
+
+
 class MessageOut(BaseModel):
     id: uuid.UUID
     type: Literal["user", "system"]
@@ -111,6 +120,7 @@ class MessageOut(BaseModel):
     task: Ref | None
     stage: Ref | None
     mentions: list[UserBrief] = Field(default_factory=list, description="People @mentioned; the body shows them as @Name.")
+    reply_to: ReplyQuote | None = None
     event: MessageEvent | None
     created_at: datetime
     deleted: bool
@@ -127,6 +137,7 @@ class MessageCreate(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
     task_id: uuid.UUID | None = None
     stage_id: uuid.UUID | None = None
+    reply_to_id: uuid.UUID | None = Field(None, description="Reply to this message (in this room, not deleted).")
     mention_ids: list[uuid.UUID] = Field(
         default_factory=list, max_length=50,
         description="People picked from the @ list. Kept only if they're active members and their @Name is still in the body.",
