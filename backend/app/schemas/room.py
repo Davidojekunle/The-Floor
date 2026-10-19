@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.common import Page
+
 RoleName = Literal["head", "temp_head", "member"]
 
 
@@ -13,7 +15,12 @@ class RoomSummary(BaseModel):
     id: uuid.UUID
     name: str
     my_role: RoleName
-    pending_count: int = 0  # join requests waiting on this user (proposals get added in phase 4)
+    pending_count: int = 0  # pending_join_requests + pending_proposals
+    pending_join_requests: int = 0  # only where the user has join.manage
+    pending_proposals: int = 0  # only where the user has task.approve
+    mine_actionable: int = 0  # tasks here where one of MY stages is todo, in_progress, or blocked
+    temp_head_expires_at: datetime | None = None  # set while I'm an active temp head in this room
+    unread_messages: int = 0  # chat messages after my read position (not mine, not about my own actions)
 
 
 class RoomCreate(BaseModel):
@@ -65,3 +72,11 @@ class JoinRequestItem(BaseModel):
 
 class InviteOut(BaseModel):
     invite_code: str
+
+
+class RoomSummaryPage(Page[RoomSummary]):
+    """Named subclass so the OpenAPI schema is `RoomSummaryPage`, not `Page_RoomSummary_`."""
+
+
+class JoinRequestPage(Page[JoinRequestItem]):
+    pass

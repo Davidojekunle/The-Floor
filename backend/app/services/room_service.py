@@ -1,16 +1,18 @@
 import secrets
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.errors import Conflict, NotFound
-from app.models.enums import MembershipStatus, Role
+from app.core.errors import AlreadyMember, AlreadyRequested, NotFound, RequestNotPending
+from app.models.enums import ApprovalStatus, MembershipStatus, Role
 from app.models.room import Membership, Room, TempHead
+from app.models.task import Stage, Task
 from app.models.user import User
 from app.permissions.rules import RoomContext, can, permissions_for_role, require, resolve_role
 from app.schemas.common import PageParams
+from app.services import chat_service
 from app.schemas.room import InviteOut, JoinPreview, JoinRequestItem, MembershipOut, RoomOut, RoomSummary, UserBrief
 from app.utils.time import as_utc, utcnow
 
@@ -127,22 +129,24 @@ def list_rooms_for_user(db: Session, user: User) -> list[RoomSummary]:
         return []
 
     room_ids = [room.id for _, room in rows]
-    temp_head_rooms = set(
-        db.scalars(
-            select(TempHead.room_id).where(
+    temp_head_until = dict(
+        db.execute(
+            select(TempHead.room_id, func.max(TempHead.expires_at))
+            .where(
                 TempHead.user_id == user.id,
                 TempHead.room_id.in_(room_ids),
                 TempHead.revoked_at.is_(None),
                 TempHead.expires_at > utcnow(),
             )
-        )
+            .group_by(TempHead.room_id)
+        ).all()
     )
 
     roles = {
-        room.id: resolve_role(m, True if room.id in temp_head_rooms else None) for m, room in rows
+        room.id: resolve_role(m, True if room.id in temp_head_until else None) for m, room in rows
     }
 
-    # pending join requests only matter where the caller can act on them (join.manage)
+    # pending items only count where the caller can act on them
     manage_ids = [rid for rid, role in roles.items() if "join.manage" in permissions_for_role(role)]
     counts: dict[uuid.UUID, int] = {}
     if manage_ids:
@@ -153,9 +157,50 @@ def list_rooms_for_user(db: Session, user: User) -> list[RoomSummary]:
                 .group_by(Membership.room_id)
             ).all()
         )
+    approve_ids = [rid for rid, role in roles.items() if "task.approve" in permissions_for_role(role)]
+    proposals: dict[uuid.UUID, int] = {}
+    if approve_ids:
+        proposals = dict(
+            db.execute(
+                select(Task.room_id, func.count())
+                .where(Task.room_id.in_(approve_ids), Task.approval_status == ApprovalStatus.PENDING)
+                .group_by(Task.room_id)
+            ).all()
+        )
+
+    # tasks where one of MY stages needs me, per room, in a single query (switcher badges)
+    from app.services import stage_logic, task_common  # local import keeps module load order simple
+
+    actionable = dict(
+        db.execute(
+            select(Task.room_id, func.count(distinct(Task.id)))
+            .join(Stage, Stage.task_id == Task.id)
+            .where(
+                Task.room_id.in_(room_ids),
+                Task.approval_status == ApprovalStatus.APPROVED,
+                Stage.status.in_(stage_logic.ACTIONABLE),
+                task_common.participant_clause_any_room(user.id),
+            )
+            .group_by(Task.room_id)
+        ).all()
+    )
+
+    unread = chat_service.unread_counts(db, user.id, room_ids)
 
     return [
-        RoomSummary(id=room.id, name=room.name, my_role=roles[room.id], pending_count=counts.get(room.id, 0))
+        RoomSummary(
+            id=room.id,
+            name=room.name,
+            my_role=roles[room.id],
+            pending_count=counts.get(room.id, 0) + proposals.get(room.id, 0),
+            pending_join_requests=counts.get(room.id, 0),
+            pending_proposals=proposals.get(room.id, 0),
+            mine_actionable=actionable.get(room.id, 0),
+            temp_head_expires_at=(
+                as_utc(temp_head_until[room.id]) if roles[room.id] == Role.TEMP_HEAD else None
+            ),
+            unread_messages=unread.get(room.id, 0),
+        )
         for _, room in rows
     ]
 
@@ -199,9 +244,9 @@ def request_join(db: Session, user: User, invite_code: str) -> MembershipOut:
         m = Membership(user_id=user.id, room_id=room.id, role=Role.MEMBER, status=MembershipStatus.PENDING)
         db.add(m)
     elif m.status == MembershipStatus.ACTIVE:
-        raise Conflict("You're already a member of this room.")
+        raise AlreadyMember("You're already a member of this room.")
     elif m.status == MembershipStatus.PENDING:
-        raise Conflict("You've already requested to join this room.")
+        raise AlreadyRequested("You've already requested to join this room.")
     else:
         # rejected or removed earlier: allowed to ask again, still needs approval
         m.status = MembershipStatus.PENDING
@@ -213,7 +258,7 @@ def request_join(db: Session, user: User, invite_code: str) -> MembershipOut:
         db.commit()
     except IntegrityError:  # two simultaneous requests
         db.rollback()
-        raise Conflict("You've already requested to join this room.")
+        raise AlreadyRequested("You've already requested to join this room.")
     return _membership_out(m)
 
 
@@ -258,10 +303,14 @@ def decide_join_request(db: Session, ctx: RoomContext, membership_id: uuid.UUID,
     if m.status == target:
         return _membership_out(m)  # repeating the same decision is safe
     if m.status != MembershipStatus.PENDING:
-        raise Conflict("This request is no longer pending.")
+        raise RequestNotPending("This request is no longer pending.")
 
     m.status = target
     if approve:
         m.joined_at = utcnow()
+        joined = chat_service.post_system(
+            db, room_id=ctx.room.id, event="member_joined", actor_id=ctx.membership.user_id, subject_id=m.user_id
+        )
+        m.last_read_message_id = joined.id  # a newcomer doesn't arrive to the whole history as unread
     db.commit()
     return _membership_out(m)
