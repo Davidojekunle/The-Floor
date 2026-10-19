@@ -29,6 +29,7 @@ const ICON: Record<string, IconName> = {
   stage_ready: 'task',
   stage_assigned: 'task',
   mentioned: 'chat',
+  replied: 'reply',
 }
 
 /** Where tapping a notification goes. Null when the place is gone (a deleted room, a room you were removed from). */

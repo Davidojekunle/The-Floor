@@ -118,7 +118,7 @@ export function StageDemo() {
             Run it again
           </button>
         ) : (
-          <span>Try it: press the green button.</span>
+          <span>Try it: press the blue button.</span>
         )}
       </div>
       <div className="demo-feed" aria-live="polite" aria-label="Room activity">

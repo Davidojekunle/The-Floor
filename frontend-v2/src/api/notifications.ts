@@ -14,6 +14,7 @@ export type NotificationType =
   | 'stage_ready'
   | 'stage_assigned'
   | 'mentioned'
+  | 'replied'
 
 type Named = { id: string; name: string }
 type Titled = { id: string; title: string }
