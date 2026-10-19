@@ -72,11 +72,11 @@ def change_password(db: Session, user: User, current: str, new: str, refresh_raw
     session_service.sign_out_everywhere(db, user, keep_family=_current_family(db, user, refresh_raw))
     text, html_body = email_service.render(
         "Your password was changed",
-        [f"Hi {user.name},", "The password for your Taskroom account was just changed. "
+        [f"Hi {user.name},", "The password for your account on The Floor was just changed. "
          "Every other device was signed out."],
         footer="If this wasn't you, reset your password straight away from the sign-in page.",
     )
-    email_service.queue(db, to=user.email, subject="Your Taskroom password was changed", text=text,
+    email_service.queue(db, to=user.email, subject="Your password for The Floor was changed", text=text,
                         html_body=html_body, category="security", user_id=user.id)
     db.commit()
     # issued after the cutoff (same second is fine: the check is inclusive), so this tab carries on
@@ -138,22 +138,22 @@ def request_email_change(db: Session, user: User, new_email: str, current: str, 
 
     text, html_body = email_service.render(
         "Confirm your new email",
-        [f"Hi {user.name},", f"Confirm that you want to use this address for Taskroom. You'll need your "
+        [f"Hi {user.name},", f"Confirm that you want to use this address for The Floor. You'll need your "
          f"password. The link expires in {EMAIL_CHANGE_HOURS} hours."],
         button=("Confirm this email", f"{base}/confirm-email?token={raw}"),
         footer="If you didn't ask for this, ignore this email. Nothing changes without the account's password.",
     )
-    email_service.queue(db, to=new_email, subject="Confirm your new Taskroom email", text=text,
+    email_service.queue(db, to=new_email, subject="Confirm your new email for The Floor", text=text,
                         html_body=html_body, category="security", user_id=user.id)
 
     text, html_body = email_service.render(
         "Your email is being changed",
-        [f"Hi {user.name},", f"Someone signed in to your Taskroom account asked to change its email to {new_email}. "
+        [f"Hi {user.name},", f"Someone signed in to your account on The Floor asked to change its email to {new_email}. "
          "Until that address is confirmed, nothing changes."],
         button=("This wasn't me, cancel it", f"{base}/cancel-email-change?token={cancel_raw}"),
         footer="If it wasn't you, cancel it and then reset your password, because someone else knows it.",
     )
-    email_service.queue(db, to=user.email, subject="Your Taskroom email is being changed", text=text,
+    email_service.queue(db, to=user.email, subject="Your email for The Floor is being changed", text=text,
                         html_body=html_body, category="security", user_id=user.id)
     live.account_changed(db, user.id)
     db.commit()
@@ -182,11 +182,11 @@ def confirm_email(db: Session, raw: str, current: str) -> None:
     row.used_at = utcnow()
     text, html_body = email_service.render(
         "Your email was changed",
-        [f"Hi {user.name},", f"Your Taskroom account now uses {row.new_email}. "
-         "Sign in with that address from now on. This address won't get Taskroom emails any more."],
+        [f"Hi {user.name},", f"Your account on The Floor now uses {row.new_email}. "
+         "Sign in with that address from now on. This address won't get emails from The Floor any more."],
         footer="If you didn't make this change, someone else knows your password.",
     )
-    email_service.queue(db, to=old, subject="Your Taskroom email was changed", text=text,
+    email_service.queue(db, to=old, subject="Your email for The Floor was changed", text=text,
                         html_body=html_body, category="security", user_id=user.id)
     live.account_changed(db, user.id)
     try:

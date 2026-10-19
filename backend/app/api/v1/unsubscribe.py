@@ -27,7 +27,7 @@ def _page(title: str, body: str, status: int = 200) -> HTMLResponse:
             '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             '<meta name="color-scheme" content="light dark"><meta name="robots" content="noindex">'
-            f"<title>{html.escape(title)} · Taskroom</title>"
+            f"<title>{html.escape(title)} · The Floor</title>"
             "<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;"
             "max-width:480px;margin:10vh auto;padding:0 16px}button{font:inherit;padding:10px 18px;border:0;"
             "border-radius:6px;background:#2f5bd3;color:#fff;font-weight:600;cursor:pointer}</style></head>"
@@ -38,7 +38,7 @@ def _page(title: str, body: str, status: int = 200) -> HTMLResponse:
 
 def _bad_link() -> HTMLResponse:
     return _page("This link doesn't work", "<p>It may have been copied incompletely. You can change which emails "
-                 "you get in Taskroom, under notification settings.</p>", status=400)
+                 "you get on The Floor, under notification settings.</p>", status=400)
 
 
 @router.get("/unsubscribe", response_class=HTMLResponse, include_in_schema=False)
@@ -50,7 +50,7 @@ def unsubscribe_page(token: TOKEN, db: Session = Depends(get_db)):
     label = notification_email.LABEL[parsed[1]]
     return _page(
         "Turn off these emails?",
-        f"<p>You'll stop getting emails for <strong>{html.escape(label)}</strong>. The bell in Taskroom keeps "
+        f"<p>You'll stop getting emails for <strong>{html.escape(label)}</strong>. The bell on The Floor keeps "
         "working, and security emails (like password changes) always arrive.</p>"
         f'<form method="post" action="?token={html.escape(token)}"><button type="submit">Turn them off</button></form>',
     )
@@ -66,4 +66,4 @@ def unsubscribe(token: TOKEN, db: Session = Depends(get_db)):
     notes.update_settings(db, user, {parsed[1]: False})
     label = notification_email.LABEL[parsed[1]]
     return _page("Done", f"<p>You won't get emails for {html.escape(label)} any more. "
-                 "You can turn them back on in Taskroom, under notification settings.</p>")
+                 "You can turn them back on on The Floor, under notification settings.</p>")

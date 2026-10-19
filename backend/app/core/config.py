@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Taskroom API"
+    app_name: str = "The Floor API"
     api_v1_prefix: str = "/api/v1"
 
     database_url: str
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # email (L2)
     email_backend: str = "console"  # console | smtp
-    email_from: str = "Taskroom <no-reply@localhost>"
+    email_from: str = "The Floor <no-reply@localhost>"
     smtp_host: str = "localhost"
     smtp_port: int = 587
     smtp_username: str = ""

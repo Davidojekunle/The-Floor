@@ -1,4 +1,4 @@
-# Taskroom backend
+# The Floor: backend
 
 FastAPI + PostgreSQL. Interactive API docs at `/docs` once it's running.
 

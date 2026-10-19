@@ -84,10 +84,10 @@ def link(n: Notification) -> str:
 
 
 GROUP_SUBJECT = {
-    "requests": "{n} new requests in Taskroom",
-    "decisions": "{n} updates about you in Taskroom",
-    "assignments": "{n} stages need you in Taskroom",
-    "mentions": "{n} mentions in Taskroom",
+    "requests": "{n} new requests on The Floor",
+    "decisions": "{n} updates about you on The Floor",
+    "assignments": "{n} stages need you on The Floor",
+    "mentions": "{n} mentions on The Floor",
 }
 
 
@@ -127,14 +127,14 @@ def flush_due(db: Session, now: datetime | None = None) -> int:
         hi = f"Hi {user.name},"
         if len(keep) == 1:
             n = keep[0]
-            _send(db, user, category, n.title, n.title, [hi, *_detail(n)], ("Open in Taskroom", link(n)))
+            _send(db, user, category, n.title, n.title, [hi, *_detail(n)], ("Open in The Floor", link(n)))
         else:
             base = get_settings().frontend_url.rstrip("/")
             one_room = {n.room_id for n in keep} == {keep[0].room_id} and all(n.type not in _GONE for n in keep)
             target = f"{base}/rooms/{keep[0].room_id}" if one_room and keep[0].room_id else f"{base}/"
             subject = GROUP_SUBJECT[category].format(n=len(keep))
             _send(db, user, category, subject, subject, [hi, *[f"• {n.title}" for n in keep]],
-                  ("Open Taskroom", target))
+                  ("Open The Floor", target))
         sent += 1
     db.commit()
     return sent
@@ -227,8 +227,8 @@ def send_digests(db: Session, now: datetime | None = None) -> int:
         if not paragraphs:
             continue  # nothing to say: no email
         base = get_settings().frontend_url.rstrip("/")
-        subject = f"Your Taskroom day: {local.strftime('%A %d %B')}"
-        _send(db, user, "daily_digest", subject, "Your day in Taskroom", [f"Good morning {user.name},", *paragraphs],
+        subject = f"Your day on The Floor: {local.strftime('%A %d %B')}"
+        _send(db, user, "daily_digest", subject, "Your day on The Floor", [f"Good morning {user.name},", *paragraphs],
               ("Open My Tasks", f"{base}/my-tasks"))
         sent += 1
     db.commit()

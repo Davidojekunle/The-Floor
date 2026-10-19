@@ -50,13 +50,13 @@ def request_reset(db: Session, email: str, request: Request | None) -> None:
                               expires_at=now + timedelta(minutes=minutes)))
     link = f"{email_service.link_base(request)}/reset-password?token={raw}"
     text, html_body = email_service.render(
-        "Reset your Taskroom password",
+        "Reset your password for The Floor",
         [f"Hi {user.name},", f"Someone asked to reset the password for this account. The link works once and "
          f"expires in {minutes} minutes."],
         button=("Choose a new password", link),
         footer="If you didn't ask for this, ignore this email. Your password stays the same.",
     )
-    email_service.queue(db, to=user.email, subject="Reset your Taskroom password", text=text, html_body=html_body,
+    email_service.queue(db, to=user.email, subject="Reset your password for The Floor", text=text, html_body=html_body,
                         category="security", user_id=user.id)
     db.commit()
 
@@ -76,9 +76,9 @@ def reset(db: Session, raw: str, new_password: str) -> None:
     session_service.sign_out_everywhere(db, user)  # including whoever had the old password
     text, html_body = email_service.render(
         "Your password was changed",
-        [f"Hi {user.name},", "The password for your Taskroom account was just reset, and every device was signed out."],
+        [f"Hi {user.name},", "The password for your account on The Floor was just reset, and every device was signed out."],
         footer="If this wasn't you, reset your password again straight away.",
     )
-    email_service.queue(db, to=user.email, subject="Your Taskroom password was changed", text=text,
+    email_service.queue(db, to=user.email, subject="Your password for The Floor was changed", text=text,
                         html_body=html_body, category="security", user_id=user.id)
     db.commit()

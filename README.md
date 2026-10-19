@@ -1,4 +1,4 @@
-# Taskroom
+# The Floor
 
 - backend/  FastAPI + PostgreSQL
 - frontend/ web app

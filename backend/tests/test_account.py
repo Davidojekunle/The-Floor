@@ -147,7 +147,7 @@ def test_change_password_keeps_this_tab_and_ends_every_other_session(app, client
 
     assert login(client).status_code == 401
     assert login(client, password="a-new-password").status_code == 200
-    assert emails(db)[-1].subject == "Your Taskroom password was changed"
+    assert emails(db)[-1].subject == "Your password for The Floor was changed"
 
 
 def test_change_password_closes_sockets_and_this_tab_reconnects(lc, db):
@@ -225,7 +225,7 @@ def test_confirm_needs_the_password_so_the_link_alone_cant_take_the_account(app,
     assert (me.json()["email"], me.json()["pending_email"]) == ("ada.new@example.com", None)
     assert login(client, email="ada.new@example.com").status_code == 200
     assert login(client).status_code == 401
-    assert emails(db, "ada@example.com")[-1].subject == "Your Taskroom email was changed"
+    assert emails(db, "ada@example.com")[-1].subject == "Your email for The Floor was changed"
     err(confirm(stranger, raw), 400, "EMAIL_TOKEN_INVALID")  # single use
 
 

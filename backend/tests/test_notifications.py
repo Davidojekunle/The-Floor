@@ -370,7 +370,7 @@ def test_requests_within_the_window_are_grouped(client, db):
         request_join(client, auth_headers(client, email=f"{name.lower()}@example.com", name=name), room["invite_code"])
     assert notification_email.flush_due(db, utcnow() + LATER) == 1
     (email,) = outbox(db, "requests")
-    assert email.subject == "3 new requests in Taskroom"
+    assert email.subject == "3 new requests on The Floor"
     for name in ("Bisi", "Chidi", "Dayo"):
         assert f"{name} asked to join Studio Alpha" in email.text_body
     assert f"http://localhost:5173/rooms/{room['id']}" in email.text_body
@@ -472,7 +472,7 @@ def test_digest_lists_overdue_work_once_a_day_at_eight_local(client, db, team):
     assert notification_email.send_digests(db, LAGOS_0805 - timedelta(hours=1)) == 0  # 07:05 in Lagos
     assert notification_email.send_digests(db, LAGOS_0805) == 1  # only Femi has anything
     (email,) = digest_emails(db)
-    assert email.to_address == "femi@example.com" and email.subject.startswith("Your Taskroom day:")
+    assert email.to_address == "femi@example.com" and email.subject.startswith("Your day on The Floor:")
     assert "Overdue" in email.text_body and "Product promo video (Studio Alpha)" in email.text_body
     assert "http://localhost:5173/my-tasks" in email.text_body
     assert notification_email.send_digests(db, LAGOS_0805 + timedelta(hours=3)) == 0  # once a day

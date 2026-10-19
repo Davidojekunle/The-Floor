@@ -69,7 +69,7 @@ def test_forgot_password_queues_a_link_email(client, db):
     r = forgot(client)
     assert r.status_code == 202
     (row,) = outbox(db)
-    assert (row.to_address, row.subject, row.category) == ("ada@example.com", "Reset your Taskroom password", "security")
+    assert (row.to_address, row.subject, row.category) == ("ada@example.com", "Reset your password for The Floor", "security")
     assert "http://localhost:5173/reset-password?token=" in row.text_body
     assert "<html" in row.html_body and 'content="light dark"' in row.html_body
     assert row.sent_at is None
@@ -132,7 +132,7 @@ def test_reset_changes_the_password_and_ends_every_session(client, db):
     old_families = db.scalars(select(RefreshToken).where(RefreshToken.revoke_reason == "logout_all")).all()
     assert len(old_families) == 1  # the second device's session
     subjects = [r.subject for r in outbox(db)]
-    assert subjects[-1] == "Your Taskroom password was changed"
+    assert subjects[-1] == "Your password for The Floor was changed"
 
 
 def test_reset_token_is_single_use_and_expires(client, db):
@@ -229,7 +229,7 @@ def test_console_delivery_marks_sent(client, db, caplog):
     forgot(client)
     with caplog.at_level("WARNING", logger="taskroom.email"):
         assert email_service.deliver_pending(db) == 1
-    assert "Reset your Taskroom password" in caplog.text
+    assert "Reset your password for The Floor" in caplog.text
     assert outbox(db)[0].sent_at is not None
     assert email_service.deliver_pending(db) == 0  # never twice
 
@@ -283,7 +283,7 @@ def test_smtp_backend_builds_a_proper_message(client, db, monkeypatch):
 
     s = get_settings()
     for k, v in {"email_backend": "smtp", "smtp_host": "smtp.example.com", "smtp_port": 587,
-                 "smtp_username": "apikey", "smtp_password": "secret", "email_from": "Taskroom <no-reply@taskroom.app>"}.items():
+                 "smtp_username": "apikey", "smtp_password": "secret", "email_from": "The Floor <no-reply@taskroom.app>"}.items():
         monkeypatch.setattr(s, k, v)
     monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
     register(client)
@@ -291,5 +291,5 @@ def test_smtp_backend_builds_a_proper_message(client, db, monkeypatch):
     assert email_service.deliver_pending(db) == 1
     msg = sent["msg"]
     assert sent["server"] == ("smtp.example.com", 587) and sent["tls"] and sent["login"] == ("apikey", "secret")
-    assert (msg["From"], msg["To"], msg["Subject"]) == ("Taskroom <no-reply@taskroom.app>", "ada@example.com", "Reset your Taskroom password")
+    assert (msg["From"], msg["To"], msg["Subject"]) == ("The Floor <no-reply@taskroom.app>", "ada@example.com", "Reset your password for The Floor")
     assert msg.get_content_type() == "multipart/alternative"
