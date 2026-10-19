@@ -155,3 +155,50 @@
   top: 4px;
   left: 22px;
 }
+
+.switch-head {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Notifications page: the one-time offer to turn on pop-ups for this device. */
+.push-prompt {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.push-prompt > svg.i {
+  color: var(--accent);
+}
+.push-prompt-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.push-prompt-text span {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.push-prompt-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+@media (max-width: 760px) {
+  .push-prompt {
+    flex-wrap: wrap;
+  }
+  .push-prompt-actions {
+    width: 100%;
+    padding-left: 34px;
+  }
+  .push-prompt-actions .btn {
+    flex: 1;
+  }
+}

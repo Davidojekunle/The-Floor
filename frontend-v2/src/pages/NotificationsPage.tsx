@@ -12,6 +12,7 @@ import { useAuth } from '../auth/useAuth'
 import { Icon, type IconName } from '../components/Icon'
 import { useToast } from '../components/toastContext'
 import { formatDay, relativeTime } from '../lib/dates'
+import { usePush } from '../lib/usePush'
 import { useTimezone } from '../lib/useTimezone'
 
 const ICON: Record<string, IconName> = {
@@ -83,6 +84,7 @@ export function NotificationsPage() {
           </button>
         )}
       </div>
+      <PushPrompt />
 
       <div className="seg" role="group" aria-label="Show">
         <button type="button" aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>
@@ -180,5 +182,45 @@ function NotificationRow({ n }: { n: Notification }) {
     <button type="button" className={`row notif${to ? ' link' : ''}${n.read ? '' : ' unread'}`} onClick={open}>
       {body}
     </button>
+  )
+}
+
+const PROMPT_KEY = 'floor-push-prompt-dismissed'
+
+/** Offered once per device until answered: push is available here but off. */
+function PushPrompt() {
+  const { state, busy, set } = usePush()
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(PROMPT_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  if (dismissed || state !== 'off') return null
+  const dismiss = () => {
+    setDismissed(true)
+    try {
+      localStorage.setItem(PROMPT_KEY, '1')
+    } catch {
+      // fine: it just shows again next visit
+    }
+  }
+  return (
+    <div className="push-prompt" role="region" aria-label="Notifications on this device">
+      <Icon name="bell" size={20} />
+      <div className="push-prompt-text">
+        <strong>Get these as pop-ups on this device</strong>
+        <span>Even when The Floor isn't open. You choose which kinds in Account settings.</span>
+      </div>
+      <div className="push-prompt-actions">
+        <button className="btn ghost sm" type="button" onClick={dismiss}>
+          Not now
+        </button>
+        <button className="btn primary sm" type="button" disabled={busy} onClick={() => void set(true)}>
+          Turn on
+        </button>
+      </div>
+    </div>
   )
 }

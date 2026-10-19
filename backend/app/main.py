@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -74,6 +75,7 @@ class ImmutableFiles(StaticFiles):
 
 def mount_frontend(app: FastAPI, dist: Path, api_prefix: str) -> None:
     """Serve the built single-page app: hashed assets cached forever, every other path gets index.html."""
+    mimetypes.add_type("application/manifest+json", ".webmanifest")
     dist = dist.resolve()
     index = dist / "index.html"
     app.mount("/assets", ImmutableFiles(directory=dist / "assets"), name="assets")
@@ -85,7 +87,8 @@ def mount_frontend(app: FastAPI, dist: Path, api_prefix: str) -> None:
             raise StarletteHTTPException(status_code=404)  # unknown API route: JSON 404, never the page
         file = (dist / path).resolve()
         if path and file.is_file() and file.is_relative_to(dist):
-            return FileResponse(file)
+            # the service worker must be re-checked on every visit, or an old one lingers for a day
+            return FileResponse(file, headers={"Cache-Control": "no-cache"} if path == "sw.js" else None)
         return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 

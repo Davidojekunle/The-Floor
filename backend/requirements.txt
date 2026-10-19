@@ -8,5 +8,6 @@ email-validator
 pyjwt
 bcrypt
 tzdata
+pywebpush
 pytest
 httpx

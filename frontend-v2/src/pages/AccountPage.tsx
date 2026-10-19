@@ -5,6 +5,7 @@ import { ApiError } from '../api/client'
 import { acceptToken } from '../auth/session'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/Dialog'
+import { PushSwitch } from '../components/PushSwitch'
 import { Switch } from '../components/Switch'
 import { useNotificationSettings } from '../room/useNotificationSettings'
 import { useToast } from '../components/toastContext'
@@ -190,45 +191,46 @@ function NotificationsSection() {
   const muted = settings.muted_rooms.length
   return (
     <Section
-      title="Email notifications"
+      title="Notifications"
       sub={
         <>
-          The bell in the app always shows everything. These choose what's also emailed. Security emails (password and email
-          changes) always go.
+          The bell in the app always shows everything. These choose what also reaches you by email and as pop-ups on your
+          devices. Security emails (password and email changes) always go.
           {muted > 0 && ` ${muted === 1 ? 'One room is' : `${muted} rooms are`} muted; change that in each room's Settings.`}
         </>
       }
     >
       <div className="switch-list">
+        <PushSwitch />
         <Switch
           label="Send me emails"
-          detail="Turn off to keep everything in the app."
+          detail="Turn off to keep everything in the app and on your devices."
           checked={settings.email_enabled}
           onChange={(v) => update({ email_enabled: v })}
         />
+      </div>
+      <h3 className="switch-head">Tell me about</h3>
+      <div className="switch-list">
         <Switch
           label="Requests"
           detail="Someone asks to join, a task is proposed, or stages are left with nobody."
           checked={settings.requests}
-          disabled={off}
           onChange={(v) => update({ requests: v })}
         />
         <Switch
           label="Decisions"
           detail="Your requests and proposals are answered, or your role changes."
           checked={settings.decisions}
-          disabled={off}
           onChange={(v) => update({ decisions: v })}
         />
         <Switch
           label="Work for you"
           detail="A stage is ready for you, or you're assigned to one."
           checked={settings.assignments}
-          disabled={off}
           onChange={(v) => update({ assignments: v })}
         />
         <Switch
-          label="Daily summary"
+          label="Daily summary email"
           detail="At 8:00 your time: what's due, overdue or blocked, and what's waiting on you."
           checked={settings.daily_digest}
           disabled={off}

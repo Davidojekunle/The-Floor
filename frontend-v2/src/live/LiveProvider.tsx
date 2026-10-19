@@ -25,6 +25,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const toast = useToast()
   const [live, setLive] = useState(false)
   const listeners = useRef(new Set<(s: LiveSignal) => void>())
+  const socketRef = useRef<LiveSocket | null>(null)
   const signedIn = user?.id ?? null
 
   // Room names for toasts, as they were before an event changed /me.
@@ -161,10 +162,12 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       },
     })
     socket.start()
+    socketRef.current = socket
     // Each refresh (here or in another tab) re-authenticates the open socket instead of reconnecting it.
     const unsubscribe = tokenStorage.subscribe((token) => token && socket.reauth(token))
     return () => {
       unsubscribe()
+      socketRef.current = null
       socket.stop()
       setLive(false)
     }
@@ -175,6 +178,10 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     return () => void listeners.current.delete(fn)
   }, [])
 
-  const value = useMemo(() => ({ live, subscribe }), [live, subscribe])
+  const sendTyping = useCallback((roomId: string, typing: boolean) => {
+    socketRef.current?.send({ type: 'typing', room_id: roomId, typing })
+  }, [])
+
+  const value = useMemo(() => ({ live, subscribe, sendTyping }), [live, subscribe, sendTyping])
   return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>
 }

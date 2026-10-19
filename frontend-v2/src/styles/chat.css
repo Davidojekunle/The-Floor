@@ -53,7 +53,14 @@
 .composer-tools .icon-btn { width: 30px; height: 30px; }
 .send-btn { margin-left: auto; width: 34px; height: 30px; border: 0; border-radius: 6px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; cursor: pointer; }
 .send-btn:disabled { background: transparent; color: var(--text-3); cursor: default; }
-.composer-hint { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--text-3); margin-top: 4px; padding: 0 2px; }
+.composer-hint { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; min-height: 16px; align-items: center; color: var(--text-3); margin-top: 4px; padding: 0 2px; }
+/* "Femi is typing": three dots taking turns. Only runs while someone is typing; still under reduced motion. */
+.composer-hint .typing { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--text-2); }
+.typing-dots { display: inline-flex; gap: 3px; }
+.typing-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .35; animation: typing-dot 1.2s ease-in-out infinite; }
+.typing-dots i:nth-child(2) { animation-delay: .15s; }
+.typing-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes typing-dot { 0%, 60%, 100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-2px); } }
 .ref-chip { justify-self: start; display: inline-flex; gap: 4px; align-items: center; font-size: 12px; background: var(--accent-soft); color: var(--accent); padding: 2px 2px 2px 10px; border-radius: 99px; }
 .ref-chip .icon-btn { width: 24px; height: 24px; color: var(--accent); }
 .jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; box-shadow: var(--shadow-pop); border-radius: 99px; z-index: 5; }
@@ -62,7 +69,7 @@
 .chat-empty p { color: var(--text-2); }
 @media (max-width: 640px) {
   .chan-head .sub { display: none; }
-  .composer-hint span:last-child { display: none; }
+  .composer-hint .hide-sm { display: none; }
 }
 
 /* ---------- Additions for the React build ---------- */

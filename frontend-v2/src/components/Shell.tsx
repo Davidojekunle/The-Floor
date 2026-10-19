@@ -12,6 +12,7 @@ import { useIsPhone } from '../lib/useMedia'
 import { useTimezone } from '../lib/useTimezone'
 import { Avatar } from './Avatar'
 import { Icon, type IconName } from './Icon'
+import { usePushRouting } from '../lib/usePushRouting'
 import { Menu, type MenuItem } from './Menu'
 import { NewRoomDialog, PasteInviteDialog } from './RoomDialogs'
 import { useToast } from './toastContext'
@@ -28,6 +29,7 @@ const MINI_KEY = 'floor-side-mini'
  */
 export function Shell() {
   const { user } = useAuth()
+  usePushRouting()
   const phone = useIsPhone()
   const location = useLocation()
   const match = useMatch('/rooms/:roomId/*')

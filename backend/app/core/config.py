@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     ws_auth_timeout_seconds: float = 10
     temp_head_expiry_check_seconds: float = 30
 
+    # browser push (Web Push). With no key set, the server makes one on first use and keeps it in the database.
+    push_enabled: bool = True
+    vapid_private_key: str = ""  # PEM; literal \n escapes are fine in a one-line env var
+    vapid_subject: str = "mailto:admin@localhost"  # push services contact this if something goes wrong
+
     # Built frontend (frontend-v2/dist) to serve from this app, so site and API share one origin. Empty = API only.
     frontend_dist: str = ""
 

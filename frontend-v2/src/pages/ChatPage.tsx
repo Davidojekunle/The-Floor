@@ -14,6 +14,7 @@ import { dayKey, formatDay } from '../lib/dates'
 import { useTimezone } from '../lib/useTimezone'
 import { useRoom } from '../room/roomContext'
 import { isLocal, useChat, type ChatItem, type LocalMessage } from '../room/useChat'
+import { typingLabel, useTyping } from '../room/useTyping'
 
 const MAX = 4000
 const GROUP_MS = 5 * 60 * 1000 // consecutive messages from one person within 5 minutes share a header
@@ -38,6 +39,7 @@ function ChatView() {
   const keepOffset = useRef<number | null>(null) // scrollHeight before older messages were added
   const seenCount = useRef(0)
   const lastMarked = useRef<string | null>(null)
+  const shiftHeld = useRef(false) // Shift + Enter keeps a new line on keyboards that skip keydown (see onBeforeInput)
 
   const [draft, setDraft] = useState('')
   const [link, setLink] = useState<{ task: Ref; stage: Ref | null } | null>(null)
@@ -46,6 +48,7 @@ function ChatView() {
   const [newBelow, setNewBelow] = useState(0)
 
   const members = useQuery({ queryKey: ['members', room.id], queryFn: () => listMembers(room.id) })
+  const typing = useTyping(room.id, user?.id)
 
   // The shell's pane gives chat its full height (see .pane-scroll.fill in shell.css).
 
@@ -95,11 +98,13 @@ function ChatView() {
   }
 
   async function submit() {
-    const body = draft.trim()
+    // Read the box itself: a phone keyboard can commit the last word in the same tick as Send, before state catches up.
+    const body = (input.current?.value ?? draft).trim()
     if (!body) return
     const sent = { body, task: link?.task ?? null, stage: link?.stage ?? null }
     setDraft('')
     setLink(null)
+    typing.stopped()
     atBottom.current = true
     resize(input.current, '')
     const result = await chat.send(sent)
@@ -110,13 +115,35 @@ function ChatView() {
   }
 
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
+    shiftHeld.current = e.shiftKey
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       void submit()
     }
   }
 
+  // Phone keyboards (Android especially) often send Enter mid-word with no usable keydown, so the browser
+  // would insert a line break. Catch the line break itself: the keyboard's Send key sends. A native listener,
+  // because React's onBeforeInput is a polyfill that never reports inputType.
+  const submitRef = useRef(submit)
+  useEffect(() => {
+    submitRef.current = submit
+  })
+  useEffect(() => {
+    const el = input.current
+    if (!el) return
+    const onBeforeInput = (e: InputEvent) => {
+      if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !shiftHeld.current) {
+        e.preventDefault()
+        void submitRef.current()
+      }
+    }
+    el.addEventListener('beforeinput', onBeforeInput)
+    return () => el.removeEventListener('beforeinput', onBeforeInput)
+  }, [])
+
   const people = members.data?.items ?? []
+  const typingNames = typing.typers.map((id) => people.find((m) => m.user.id === id)?.user.name).filter((n): n is string => !!n)
 
   return (
     <section className="chat-screen" ref={screen} aria-label={`${room.name} chat`}>
@@ -200,23 +227,52 @@ function ChatView() {
             onChange={(e) => {
               setDraft(e.target.value)
               resize(e.target, e.target.value)
+              typing.typed(e.target.value)
             }}
             onKeyDown={onKey}
+            onKeyUp={(e) => (shiftHeld.current = e.shiftKey)}
+            enterKeyHint="send"
           />
           <div className="composer-tools">
             <button className="icon-btn" type="button" onClick={() => setLinking(true)} aria-label="Link a task" title="Link a task">
               <Icon name="link" />
             </button>
-            <button className="send-btn" type="button" onClick={() => void submit()} disabled={!draft.trim()} aria-label="Send" title="Send">
+            <button
+              className="send-btn"
+              type="button"
+              // Keep focus in the box: blurring it closes the keyboard and moves the layout before the tap
+              // lands, which made the first tap on a phone miss. The keyboard stays up for the next message.
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => void submit()}
+              disabled={!draft.trim()}
+              aria-label="Send"
+              title="Send"
+            >
               <Icon name="send" />
             </button>
           </div>
         </div>
         <div className="composer-hint">
-          <span>{draft.length > 3500 ? `${draft.length} / ${MAX}` : ''}</span>
-          <span className="hide-sm">
-            <strong>Enter</strong> to send · <strong>Shift + Enter</strong> for a new line
+          {/* Always rendered, so someone starting to type never moves the composer. */}
+          <span className="typing" aria-live="polite">
+            {typingNames.length > 0 && (
+              <>
+                {typingLabel(typingNames)}
+                <span className="typing-dots" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              </>
+            )}
           </span>
+          {draft.length > 3500 ? (
+            <span className="count-hint">{`${draft.length} / ${MAX}`}</span>
+          ) : (
+            <span className="hide-sm">
+              <strong>Enter</strong> to send · <strong>Shift + Enter</strong> for a new line
+            </span>
+          )}
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { getMe, loginRequest, logoutAllRequest, logoutRequest, registerRequest, type Me, type RegisterInput } from '../api/auth'
 import { AuthContext } from './authContext'
+import { pausePush } from '../lib/push'
 import { applyTheme } from '../lib/theme'
 import { sessionHint } from './sessionHint'
 import { acceptToken, announceSignOut, refreshSession, setSessionEndedHandler, type RefreshOutcome } from './session'
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signOutLocally = useCallback(() => {
+    void pausePush({ tellServer: false }) // no more pop-ups for this account on this browser
     tokenStorage.clear()
     announceSignOut()
     queryClient.clear()
@@ -86,7 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient])
 
   const logout = useCallback(async () => {
-    // Clear the cookie on the server first. If that fails (offline), sign out here anyway.
+    // Forget this browser for push while the session still works, then clear the cookie on the server.
+    // If that fails (offline), sign out here anyway.
+    await pausePush({ tellServer: true })
     await logoutRequest().catch(() => {})
     signOutLocally()
   }, [signOutLocally])

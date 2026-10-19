@@ -23,7 +23,8 @@ from tests.conftest import (
 )
 
 API = "/api/v1"
-ALLOWED_KEYS = {"type", "room_id", "at", "task_id", "stage_id", "message_id", "reason", "notification_id"}
+ALLOWED_KEYS = {"type", "room_id", "at", "task_id", "stage_id", "message_id", "reason", "notification_id",
+                "user_id", "typing"}
 
 
 @pytest.fixture
@@ -337,3 +338,30 @@ def test_temp_head_expiry_announces_room_changed(lc, db):
     with socket(lc, team.tola) as tola:
         hub.publish(found)
         assert kinds(drain(tola)) == ["room_changed"]
+
+
+# =========================================================== typing
+
+def test_typing_reaches_the_rest_of_the_room_only(lc):
+    team = make_team(lc)
+    outsider = auth_headers(lc, email="out@example.com", name="Out")
+    create_room(lc, outsider, "Elsewhere")
+    with socket(lc, team.femi) as femi, socket(lc, team.tola) as tola, socket(lc, outsider) as out:
+        femi.send_json({"type": "typing", "room_id": team.room["id"], "typing": True})
+        (event,) = drain(tola)
+        assert event == {"type": "typing", "room_id": team.room["id"], "user_id": team.ids["femi"], "typing": True,
+                         "at": event["at"]}
+        assert drain(femi) == []  # not echoed back
+        assert drain(out) == []
+        femi.send_json({"type": "typing", "room_id": team.room["id"], "typing": False})
+        assert drain(tola)[0]["typing"] is False
+
+
+def test_typing_into_a_room_you_are_not_in_goes_nowhere(lc):
+    team = make_team(lc)
+    outsider = auth_headers(lc, email="out@example.com", name="Out")
+    with socket(lc, team.tola) as tola, socket(lc, outsider) as out:
+        out.send_json({"type": "typing", "room_id": team.room["id"]})
+        out.send_json({"type": "typing", "room_id": "not-a-uuid"})
+        assert drain(tola) == []
+        assert drain(out) == []  # and the socket is still fine

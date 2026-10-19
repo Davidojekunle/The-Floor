@@ -21,6 +21,7 @@ from app.models.task import Stage, StageAssignee, Task
 from app.models.user import User
 from app.permissions.rules import RoomContext
 from app.realtime import events as live
+from app.services import push_service
 from app.utils.time import as_utc, utcnow
 
 CATEGORY = {
@@ -130,7 +131,25 @@ def notify(db: Session, user_id, type_: str, title: str, *, room=None, task=None
     )
     db.add(n)
     live.notification_created(db, user_id, n.room_id, n.id)
+    if getattr(settings_for(db, user_id), category):  # push follows the category switches, like email
+        body = n.room_name if n.room_name and n.room_name not in n.title else None  # titles usually name the room
+        push_service.queue(db, user_id, title=n.title, body=body, url=target_path(n), tag=str(n.id))
     return n
+
+
+def target_path(n: Notification) -> str:
+    """Where opening it goes in the app. Same rules as targetOf() in NotificationsPage.tsx."""
+    if not n.room_id or n.type in ("room_deleted", "removed_from_room"):
+        return "/notifications"
+    room = f"/rooms/{n.room_id}"
+    if n.type in ("join_requested", "proposal_submitted"):
+        return f"{room}/requests"
+    if n.type == "stages_unassigned":
+        stages = (n.data or {}).get("stages") or []
+        return f"{room}/tasks/{stages[0]['task_id']}" if stages and stages[0].get("task_id") else room
+    if n.task_id:
+        return f"{room}/tasks/{n.task_id}"
+    return room
 
 
 def _clear_cache(session) -> None:

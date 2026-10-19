@@ -9,7 +9,8 @@ if [ -n "$RENDER_EXTERNAL_URL" ]; then
   : "${FRONTEND_URL:=$RENDER_EXTERNAL_URL}"
   : "${PUBLIC_API_URL:=$RENDER_EXTERNAL_URL}"
   : "${CORS_ORIGINS:=$RENDER_EXTERNAL_URL}"
-  export FRONTEND_URL PUBLIC_API_URL CORS_ORIGINS
+  : "${VAPID_SUBJECT:=$RENDER_EXTERNAL_URL}" # push services (Apple's especially) want a real contact URL
+  export FRONTEND_URL PUBLIC_API_URL CORS_ORIGINS VAPID_SUBJECT
 fi
 
 alembic upgrade head

@@ -30,6 +30,8 @@ export type LiveEvent = {
   message_id?: string
   reason?: string // room_access_lost: removed | left | room_deleted
   notification_id?: string // notification_created
+  user_id?: string // typing: who
+  typing?: boolean // typing: started (true) or stopped (false)
 }
 
 export type LiveStatus = 'connecting' | 'live' | 'down'
@@ -80,6 +82,11 @@ export class LiveSocket {
   /** Send a refreshed token on the open socket so the server moves its expiry. */
   reauth(token: string) {
     if (this.ready && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: 'auth', token }))
+  }
+
+  /** Fire-and-forget (typing). Dropped while not connected: nothing here needs to be delivered late. */
+  send(payload: Record<string, unknown>) {
+    if (this.ready && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(payload))
   }
 
   /** Back online: don't sit out the rest of a long backoff. */

@@ -135,3 +135,6 @@ def sign_out_everywhere(db: Session, user: User, keep_family=None) -> None:
     db.execute(q.values(revoked_at=utcnow(), revoke_reason=ALL_SESSIONS))
     user.sessions_valid_after = utcnow().replace(microsecond=0)
     live.close_sockets(db, user.id)
+    from app.services import push_service
+
+    push_service.forget_all(db, user.id)

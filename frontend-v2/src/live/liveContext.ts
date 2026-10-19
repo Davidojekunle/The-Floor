@@ -8,9 +8,11 @@ export type LiveContextValue = {
   /** The socket is connected and authenticated. While false, screens keep polling as before. */
   live: boolean
   subscribe: (listener: (signal: LiveSignal) => void) => () => void
+  /** Tell the room's other members you're typing (or stopped). Best effort; nothing if offline. */
+  sendTyping: (roomId: string, typing: boolean) => void
 }
 
-export const LiveContext = createContext<LiveContextValue>({ live: false, subscribe: () => () => {} })
+export const LiveContext = createContext<LiveContextValue>({ live: false, subscribe: () => () => {}, sendTyping: () => {} })
 
 export const useLive = () => useContext(LiveContext)
 
