@@ -118,6 +118,18 @@ The repo deploys to **[Render](https://render.com)** as a single Docker web serv
 
 To send real email, set `EMAIL_BACKEND=smtp`, `EMAIL_FROM` and the `SMTP_*` settings in Render's Environment tab. Render's free plan blocks the usual mail ports, so use a provider that accepts port 2525 (for example Brevo). On the free plan the service also sleeps after about 15 idle minutes: the first visit after that takes up to a minute, and emails and pushes wait until it's awake.
 
+### The admin page
+
+`/admin` shows staff whether the site is healthy (database, background jobs, email queue, push) and how it's being used: accounts, active people, rooms, tasks, overdue and blocked stages, and an 8-week chart. It shows totals only, never names, task titles or messages. Everyone else gets a 404 from its API, and the page sends them back to their rooms.
+
+Staff can't be granted from inside the app. Run this from `backend/`, with `DATABASE_URL` pointing at the database you mean:
+
+```bash
+python -m scripts.staff add you@example.com     # also: list, remove
+```
+
+Staff then see **Admin** in their account menu.
+
 ## Settings
 
 The main backend settings (see [`backend/.env.example`](backend/.env.example) for the full list):

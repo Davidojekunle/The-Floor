@@ -25,6 +25,7 @@ export type Me = {
   pending_email: string | null // a new address waiting to be confirmed
   unread_notifications: number // the bell's badge
   rooms: RoomSummary[]
+  is_staff: boolean // can open /admin (health and usage totals)
 }
 
 export type MeUpdate = { name?: string; timezone?: string; theme?: Theme }

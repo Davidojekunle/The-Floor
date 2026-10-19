@@ -254,6 +254,7 @@ function AccountMenu({ variant }: { variant: 'side' | 'top' }) {
       }
       items={[
         { label: 'Account settings', onSelect: () => navigate('/account') },
+        ...(user.is_staff ? [{ label: 'Admin', onSelect: () => navigate('/admin') }] : []),
         'divider',
         { label: 'Sign out', onSelect: () => void logout() },
         {

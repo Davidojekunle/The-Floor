@@ -9,6 +9,7 @@ import { AuthPage } from './pages/AuthPage'
 import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordPages'
 import { CancelEmailChangePage, ConfirmEmailPage } from './pages/EmailPages'
 import { AccountPage } from './pages/AccountPage'
+import { AdminPage } from './pages/AdminPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { ChatPage } from './pages/ChatPage'
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/rooms" element={<RoomsPage />} />
         <Route path="/my-work" element={<MyWorkPage />} />
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
 
         <Route path="/rooms/:roomId" element={<RoomProvider />}>

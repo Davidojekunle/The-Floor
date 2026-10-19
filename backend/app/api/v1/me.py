@@ -26,6 +26,7 @@ def build_me(db: Session, user: User) -> MeResponse:
         pending_email=account_service.pending_email(db, user),
         unread_notifications=notification_service.unread_count(db, user),
         rooms=room_service.list_rooms_for_user(db, user),
+        is_staff=user.is_staff,
     )
 
 

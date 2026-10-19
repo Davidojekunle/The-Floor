@@ -139,9 +139,13 @@ def deliver_pending(db: Session, limit: int = 50) -> int:
 async def run_sender(session_factory, interval: float) -> None:
     """Background loop started with the app (one process)."""
     while True:
+        from app.services import admin_service
+
         try:
             await run_in_threadpool(_deliver_once, session_factory)
-        except Exception:
+            admin_service.loop_ran()
+        except Exception as e:
+            admin_service.loop_failed(e)
             logger.exception("email sender pass failed")
         await asyncio.sleep(interval)
 

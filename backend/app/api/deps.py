@@ -4,7 +4,7 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.errors import Unauthenticated
+from app.core.errors import NotFound, Unauthenticated
 from app.core.ratelimit import MINUTE, limiter
 from app.core.security import decode_access_token_claims, token_predates_sign_out
 from app.db.session import get_db
@@ -35,6 +35,13 @@ def get_current_user(
     if token_predates_sign_out(claims, user):
         raise Unauthenticated("You were signed out. Please sign in again.")
     limiter.hit(f"user:{user.id}", 300, MINUTE)  # a safety net normal use never reaches
+    return user
+
+
+def require_staff(user: User = Depends(get_current_user)) -> User:
+    """Staff only. Everyone else gets a plain 404, so the admin routes don't advertise themselves."""
+    if not user.is_staff:
+        raise NotFound("Not found.")
     return user
 
 

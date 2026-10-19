@@ -42,6 +42,10 @@ _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="push")
 
 # ================================================================== keys
 
+# Since this process started (shown on the admin page). Not stored: a restart resets them.
+STATS = {"sent": 0, "failed": 0, "gone": 0}
+
+
 def _b64url(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
@@ -168,13 +172,17 @@ def deliver(bind, pending) -> int:
                         timeout=10,
                     )
                     sent += 1
+                    STATS["sent"] += 1
                 except WebPushException as e:
                     status = getattr(e.response, "status_code", None)
                     if status in (404, 410):
                         gone.append(sub.id)  # the browser dropped it (uninstalled, permission revoked)
+                        STATS["gone"] += 1
                     else:
+                        STATS["failed"] += 1
                         logger.warning("push to %s failed: %s", urlparse(sub.endpoint).hostname, e)
                 except Exception as e:  # network trouble: try again with the next notification
+                    STATS["failed"] += 1
                     logger.warning("push to %s failed: %s", urlparse(sub.endpoint).hostname, e)
         if gone:
             db.execute(delete(PushSubscription).where(PushSubscription.id.in_(gone)))

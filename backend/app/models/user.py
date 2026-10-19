@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Uuid
+from sqlalchemy import Boolean, DateTime, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -22,3 +22,5 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     # access tokens issued before this moment (whole seconds) are rejected: sign-out takes effect at once
     sessions_valid_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # sees the /admin health and usage page (totals only). Set with `python -m scripts.staff`, never through the API.
+    is_staff: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

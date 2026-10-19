@@ -79,6 +79,7 @@ class MeResponse(UserOut):
     pending_email: str | None = Field(None, description="Set while an email change waits for confirmation. Login still uses `email`.")
     unread_notifications: int = 0
     rooms: list[RoomSummary] = []
+    is_staff: bool = Field(False, description="Can open the admin page (health and usage totals).")
 
 
 class UpdateMeRequest(BaseModel):
