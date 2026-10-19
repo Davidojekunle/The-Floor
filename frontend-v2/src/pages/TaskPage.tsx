@@ -22,6 +22,8 @@ import { plural, statusLabel } from '../lib/labels'
 import { useTimezone } from '../lib/useTimezone'
 import { useCan, useRoom } from '../room/roomContext'
 import { StageActions } from '../room/StageActions'
+import { NudgeBanner, NudgeButton } from '../room/NudgeControls'
+import { googleCalendarEventUrl, openInNewTab } from '../lib/googleCalendar'
 import { StageUpdates, TaskUpdatesFeed } from '../room/StageUpdates'
 import { useRoomError } from '../room/useRoomError'
 
@@ -96,6 +98,20 @@ export function TaskPage() {
   const items: MenuItem[] = []
   if (t.can_edit) items.push({ label: `Edit ${noun}`, onSelect: () => navigate(`/rooms/${room.id}/tasks/${t.id}/edit`) })
   if (!isProposal && canSaveTemplate) items.push({ label: 'Save as template', onSelect: () => saveTemplate.mutate(t) })
+  if (!isProposal && t.status !== 'done')
+    items.push({
+      label: 'Add due date to Google Calendar',
+      onSelect: () =>
+        openInNewTab(
+          googleCalendarEventUrl({
+            title: t.title,
+            dueIso: t.due_date,
+            timeZone: tz,
+            details: `Due in ${room.name} on The Floor.`,
+            link: `${window.location.origin}/rooms/${room.id}/tasks/${t.id}`,
+          }),
+        ),
+    })
   if (t.can_delete && !isMyProposal) // a proposer withdraws from the decision bar instead
     items.push('divider', { label: `Delete ${noun}`, danger: true, onSelect: () => setConfirmDelete(true) })
 
@@ -392,6 +408,28 @@ function StageItem({ task, stage: s, previous, tz, planned }: { task: TaskDetail
               <span className={s.is_overdue && !planned ? 'flag-late' : undefined}>{dueLabel(s.due_date, tz, s.is_overdue && !planned)}</span>
             </>
           )}
+          {s.involves_me && !planned && s.status !== 'done' && (
+            <>
+              <span className="sep" />
+              <button
+                className="link-btn"
+                type="button"
+                onClick={() =>
+                  openInNewTab(
+                    googleCalendarEventUrl({
+                      title: `${s.title} · ${task.title}`,
+                      dueIso: s.due_date ?? task.due_date,
+                      timeZone: tz,
+                      details: 'Your stage on The Floor.',
+                      link: `${window.location.origin}/rooms/${task.room_id}/tasks/${task.id}`,
+                    }),
+                  )
+                }
+              >
+                Add to Google Calendar
+              </button>
+            </>
+          )}
           {s.status === 'done' && s.completed_by && (
             <>
               <span className="sep" />
@@ -400,6 +438,12 @@ function StageItem({ task, stage: s, previous, tz, planned }: { task: TaskDetail
           )}
         </div>
         {s.status === 'blocked' && s.blocked_reason && <div className="reason">{s.blocked_reason}</div>}
+        {!planned && <NudgeBanner task={task} stage={s} />}
+        {!planned && isModerator && s.nudge_kind && (
+          <div className="stage-actions">
+            <NudgeButton task={task} stage={s} />
+          </div>
+        )}
         {!planned &&
           (s.status === 'locked' && !s.can_update_status ? (
             <span className="faint small">

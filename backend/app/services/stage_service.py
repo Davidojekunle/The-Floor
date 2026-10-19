@@ -195,6 +195,10 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
 
     old = stage.status
     logic.apply_status(stage, new, body.blocked_reason, ctx.membership.user_id, utcnow())
+    if participant:
+        from app.services import nudge_service
+
+        nudge_service.answered(db, ctx, task, stage, new)
 
     # room chat: one system message per milestone
     post = lambda event, **kw: chat_service.post_system(  # noqa: E731

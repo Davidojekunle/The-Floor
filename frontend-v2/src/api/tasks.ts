@@ -24,6 +24,10 @@ export type Stage = {
   allowed_statuses: StageStatus[]
   can_update_status: boolean
   update_count: number // progress updates posted on this stage (phase 6b)
+  /** The last nudge. Shown to the people on the stage and to heads. */
+  nudge: { at: string; by: UserBrief | null; kind: 'update' | 'block'; note: string | null; open: boolean } | null
+  nudge_kind: 'update' | 'block' | null // heads only: what a nudge would be now (late/stuck, or blocked)
+  can_nudge: boolean // heads only, and not nudged in the last day
 }
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
@@ -181,3 +185,11 @@ export const updateTemplate = (roomId: string, templateId: string, body: Partial
 
 export const deleteTemplate = (roomId: string, templateId: string) =>
   apiRequest<void>(`/rooms/${roomId}/templates/${templateId}`, { method: 'DELETE' })
+
+/** Heads: privately ask the people on a late, stuck or blocked stage for an update (once a day). */
+export const nudgeStage = (roomId: string, taskId: string, stageId: string, note?: string) =>
+  apiRequest<TaskDetail>(`/rooms/${roomId}/tasks/${taskId}/stages/${stageId}/nudge`, { method: 'POST', body: note ? { note } : {} })
+
+/** “I'm on it”: starts a To do stage, or answers the nudge on one already in progress. */
+export const ackNudge = (roomId: string, taskId: string, stageId: string) =>
+  apiRequest<TaskDetail>(`/rooms/${roomId}/tasks/${taskId}/stages/${stageId}/nudge/ack`, { method: 'POST' })

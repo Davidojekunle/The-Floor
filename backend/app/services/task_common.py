@@ -14,7 +14,7 @@ from app.models.user import User
 from app.permissions.rules import RoomContext, can
 from app.schemas.member import TagBrief
 from app.schemas.room import UserBrief
-from app.schemas.task import StageOut, TaskDetail, TaskListItem
+from app.schemas.task import NudgeOut, StageOut, TaskDetail, TaskListItem
 from app.services import stage_logic as logic
 from app.utils.time import as_utc, utcnow
 
@@ -233,6 +233,7 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
         assignees[stage_id].append(UserBrief(id=user.id, name=user.name))
 
     user_ids = {task.created_by} | {s.completed_by for s in stages if s.completed_by}
+    user_ids |= {s.last_nudged_by for s in stages if s.last_nudged_by}
     user_ids |= {uid for uid in (task.approved_by, task.decided_by) if uid}
     users = {u.id: u for u in db.scalars(select(User).where(User.id.in_(user_ids)))}
 
@@ -263,6 +264,14 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
             stages, i, participant=s.id in mine, can_edit=can_edit, can_override=can_override
         ) if approved else []
         completed_by = users.get(s.completed_by) if s.completed_by else None
+        from app.services import nudge_service  # local: nudge_service builds on this module
+
+        nudge = None
+        if s.last_nudged_at is not None and s.nudge_kind and (s.id in mine or can_edit):
+            nudger = users.get(s.last_nudged_by) if s.last_nudged_by else None
+            nudge = NudgeOut(at=as_utc(s.last_nudged_at), by=UserBrief(id=nudger.id, name=nudger.name) if nudger else None,
+                             kind=s.nudge_kind, note=s.nudge_note, open=s.nudge_open)
+        nudge_kind = nudge_service.kind_for(s, task, now) if (approved and can_edit) else None
         stage_out.append(
             StageOut(
                 id=s.id,
@@ -283,6 +292,9 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
                 allowed_statuses=allowed,
                 can_update_status=bool(allowed),
                 update_count=update_counts.get(s.id, 0),
+                nudge=nudge,
+                nudge_kind=nudge_kind,
+                can_nudge=nudge_kind is not None and not nudge_service.nudged_recently(s, now),
             )
         )
 

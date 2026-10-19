@@ -86,6 +86,18 @@ class AlreadyApproved(Conflict):
     code = "ALREADY_APPROVED"
 
 
+class NotNudgeable(Conflict):
+    code = "NOT_NUDGEABLE"
+
+
+class AlreadyNudged(Conflict):
+    code = "ALREADY_NUDGED"
+
+
+class NobodyOnStage(Conflict):
+    code = "NOBODY_ON_STAGE"
+
+
 class RateLimited(AppError):
     status_code = 429
     code = "RATE_LIMITED"

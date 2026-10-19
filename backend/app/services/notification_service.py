@@ -39,6 +39,10 @@ CATEGORY = {
     "stage_assigned": "assignments",
     "mentioned": "mentions",
     "replied": "mentions",  # a reply is a way of addressing you, so it shares the Mentions switch
+    "nudged": "assignments",  # a head asked for an update on your stage
+    "stage_due_soon": "assignments",  # automatic reminders
+    "stage_overdue": "assignments",
+    "nudge_answered": "decisions",  # someone answered the nudge you sent
 }
 TYPES = tuple(CATEGORY)
 SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest", "mentions", "all_messages")
@@ -136,6 +140,8 @@ def notify(db: Session, user_id, type_: str, title: str, *, room=None, task=None
     if getattr(settings_for(db, user_id), category):  # push follows the category switches, like email
         if data and data.get("preview"):
             body = data["preview"]  # a mention: show what was said
+        elif data and data.get("note"):
+            body = data["note"]  # a nudge with a note
         else:
             body = n.room_name if n.room_name and n.room_name not in n.title else None  # titles usually name the room
         push_service.queue(db, user_id, title=n.title, body=body, url=target_path(n), tag=str(n.id))

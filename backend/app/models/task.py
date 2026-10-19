@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Uuid, event
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -54,6 +54,25 @@ class Stage(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # when the stage reached its current status (kept by the listener below, whatever changed it)
+    status_since: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    # nudges: a head asked for an update (kind "update") or about a block (kind "block")
+    last_nudged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_nudged_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    nudge_kind: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    nudge_note: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    nudge_open: Mapped[bool] = mapped_column(Boolean, default=False)  # true until someone on the stage answers
+
+    # automatic reminders: the effective due date each one was sent for (a changed due date re-arms them)
+    reminded_soon_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminded_overdue_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+@event.listens_for(Stage.status, "set")
+def _stamp_status_since(stage: "Stage", value, oldvalue, initiator) -> None:
+    if value != oldvalue:
+        stage.status_since = utcnow()
 
 
 class StageAssignee(Base):

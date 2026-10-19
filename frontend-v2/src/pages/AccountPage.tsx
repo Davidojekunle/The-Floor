@@ -5,6 +5,7 @@ import { ApiError } from '../api/client'
 import { acceptToken } from '../auth/session'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/Dialog'
+import { CalendarSubscribe } from '../components/CalendarSubscribe'
 import { PushSwitch } from '../components/PushSwitch'
 import { Switch } from '../components/Switch'
 import { useNotificationSettings } from '../room/useNotificationSettings'
@@ -40,6 +41,7 @@ export function AccountPage() {
       <ProfileSection />
       <AppearanceSection />
       <NotificationsSection />
+      <CalendarSection />
       <EmailSection />
       <PasswordSection />
       <SessionsSection />
@@ -225,7 +227,7 @@ function NotificationsSection() {
         />
         <Switch
           label="Work for you"
-          detail="A stage is ready for you, or you're assigned to one."
+          detail="A stage is ready for you or you're assigned to one, it's due soon or overdue, or a head asks for an update."
           checked={settings.assignments}
           onChange={(v) => update({ assignments: v })}
         />
@@ -249,6 +251,14 @@ function NotificationsSection() {
           onChange={(v) => update({ daily_digest: v })}
         />
       </div>
+    </Section>
+  )
+}
+
+function CalendarSection() {
+  return (
+    <Section title="Calendar" sub="See your stages and their due dates in Google Calendar, Apple Calendar or Outlook.">
+      <CalendarSubscribe />
     </Section>
   )
 }

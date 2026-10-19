@@ -24,6 +24,19 @@ def _clean(v: str | None, what: str) -> str | None:
 
 # ------------------------------------------------------------------ output
 
+class NudgeOut(BaseModel):
+    """The last nudge on a stage. Shown to the people on it and to heads."""
+    at: datetime
+    by: UserBrief | None
+    kind: Literal["update", "block"]
+    note: str | None
+    open: bool = Field(description="True until someone on the stage answers it.")
+
+
+class NudgeIn(BaseModel):
+    note: str | None = Field(None, max_length=200, description="Optional one line, e.g. “The event is on Friday.”")
+
+
 class StageOut(BaseModel):
     id: uuid.UUID
     title: str
@@ -43,6 +56,10 @@ class StageOut(BaseModel):
     allowed_statuses: list[StageStatusName]
     can_update_status: bool
     update_count: int = 0  # progress updates posted on this stage
+    nudge: NudgeOut | None = None
+    nudge_kind: Literal["update", "block"] | None = Field(
+        None, description="What a nudge would be now (heads only): update = late or stuck 3+ days, block = blocked.")
+    can_nudge: bool = Field(False, description="Heads/temp heads, the stage is late, stuck or blocked, and not nudged in 24h.")
 
 
 class TaskDetail(BaseModel):

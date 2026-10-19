@@ -10,6 +10,7 @@ NotificationType = Literal[
     "removed_from_room", "room_deleted",
     "stage_ready", "stage_assigned",
     "mentioned", "replied",
+    "nudged", "nudge_answered", "stage_due_soon", "stage_overdue",
 ]
 
 
@@ -35,7 +36,7 @@ class NotificationOut(BaseModel):
         None,
         description="Extra details by type. proposal_rejected: {reason}. temp_head_granted: {expires_at}. "
                     "stages_unassigned: {stages: [{task_id, task_title, stage_id, stage_title}]}. "
-                    "mentioned, replied: {message_id, preview}.",
+                    "mentioned, replied: {message_id, preview}. nudged: {kind: update|block, note}.",
     )
     created_at: datetime
     read: bool

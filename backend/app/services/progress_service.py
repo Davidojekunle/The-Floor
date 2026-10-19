@@ -89,6 +89,10 @@ def post_update(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uui
     )
     db.add(update)
     live.task_updates_changed(db, task, stage.id)
+    if stage.id in common.my_stage_ids(db, ctx, stages):
+        from app.services import nudge_service
+
+        nudge_service.answered(db, ctx, task, stage, "update")
     if body.share_to_chat:
         shared = Message(
                 room_id=ctx.room.id,

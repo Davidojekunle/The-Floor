@@ -92,6 +92,8 @@ GROUP_SUBJECT = {
 
 
 def _detail(n: Notification) -> list[str]:
+    if n.type == "nudged" and n.data and n.data.get("note"):
+        return [f"“{n.data['note']}”"]
     if n.type in ("mentioned", "replied") and n.data and n.data.get("preview"):
         return [f"“{n.data['preview']}”"]
     if n.type == "proposal_rejected" and n.data and n.data.get("reason"):
@@ -257,6 +259,11 @@ def tick(db: Session) -> None:
     if mono - _last["digest"] >= 60:
         _last["digest"] = mono
         send_digests(db)
+    if mono - _last.get("reminders", -1e9) >= 60:
+        _last["reminders"] = mono
+        from app.services import reminder_service
+
+        reminder_service.send_reminders(db)
     if mono - _last["purge"] >= 3600:
         _last["purge"] = mono
         purge_old(db)

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { listTasks } from '../api/tasks'
+import { CalendarSubscribe } from '../components/CalendarSubscribe'
+import { Dialog } from '../components/Dialog'
+import { Icon } from '../components/Icon'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { calendarWindow, toEvent } from '../lib/calendar'
 import { dayKey } from '../lib/dates'
@@ -12,6 +15,7 @@ export function CalendarPage() {
   const { room } = useRoom()
   const tz = useTimezone()
   const [month, setMonth] = useState(() => dayKey(new Date().toISOString(), tz).slice(0, 7))
+  const [subscribing, setSubscribing] = useState(false)
   const [mineOnly, setMineOnly] = useState(false)
   const range = calendarWindow(month, tz)
 
@@ -32,15 +36,34 @@ export function CalendarPage() {
           <h1>Calendar</h1>
           <p className="sub">Tasks in {room.name}, on the day they're due.</p>
         </div>
-        <div className="seg" role="group" aria-label="Show">
-          <button type="button" aria-pressed={!mineOnly} onClick={() => setMineOnly(false)}>
-            All tasks
-          </button>
-          <button type="button" aria-pressed={mineOnly} onClick={() => setMineOnly(true)}>
-            Involves me
+        <div className="cal-head-actions">
+          <div className="seg" role="group" aria-label="Show">
+            <button type="button" aria-pressed={!mineOnly} onClick={() => setMineOnly(false)}>
+              All tasks
+            </button>
+            <button type="button" aria-pressed={mineOnly} onClick={() => setMineOnly(true)}>
+              Involves me
+            </button>
+          </div>
+          <button className="btn" type="button" onClick={() => setSubscribing(true)}>
+            <Icon name="calendar" />
+            Subscribe
           </button>
         </div>
       </div>
+      {subscribing && (
+        <Dialog
+          title={`Subscribe to ${room.name}`}
+          onClose={() => setSubscribing(false)}
+          actions={
+            <button className="btn ghost" type="button" onClick={() => setSubscribing(false)}>
+              Done
+            </button>
+          }
+        >
+          <CalendarSubscribe roomId={room.id} roomName={room.name} />
+        </Dialog>
+      )}
       <MonthCalendar
         month={month}
         onMonthChange={setMonth}

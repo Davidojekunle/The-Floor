@@ -15,6 +15,10 @@ export type NotificationType =
   | 'stage_assigned'
   | 'mentioned'
   | 'replied'
+  | 'nudged'
+  | 'nudge_answered'
+  | 'stage_due_soon'
+  | 'stage_overdue'
 
 type Named = { id: string; name: string }
 type Titled = { id: string; title: string }
@@ -32,6 +36,8 @@ export type Notification = {
     reason?: string
     expires_at?: string
     preview?: string // mentioned: what was said
+    note?: string | null // nudged: the head's optional note
+    kind?: 'update' | 'block' // nudged
     message_id?: string
     stages?: { task_id: string; task_title: string; stage_id: string; stage_title: string }[]
   } | null

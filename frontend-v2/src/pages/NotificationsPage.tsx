@@ -30,6 +30,10 @@ const ICON: Record<string, IconName> = {
   stage_assigned: 'task',
   mentioned: 'chat',
   replied: 'reply',
+  nudged: 'bell',
+  nudge_answered: 'check',
+  stage_due_soon: 'calendar',
+  stage_overdue: 'calendar',
 }
 
 /** Where tapping a notification goes. Null when the place is gone (a deleted room, a room you were removed from). */
@@ -152,7 +156,9 @@ function NotificationRow({ n }: { n: Notification }) {
   }
 
   const detail =
-    n.type === 'mentioned' && n.data?.preview ? (
+    n.type === 'nudged' && n.data?.note ? (
+      <span className="quote">{n.data.note}</span>
+    ) : n.type === 'mentioned' && n.data?.preview ? (
       <span className="quote">{n.data.preview}</span>
     ) : n.type === 'proposal_rejected' && n.data?.reason ? (
       <span className="quote">{n.data.reason}</span>

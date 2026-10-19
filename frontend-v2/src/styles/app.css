@@ -1173,3 +1173,42 @@ a.row:hover {
   gap: 8px;
   margin-left: auto;
 }
+
+/* ---------- Nudges and calendar subscriptions ---------- */
+.nudge-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--attn-soft);
+  color: var(--text);
+}
+.nudge-banner > svg.i {
+  color: var(--attn);
+  margin-top: 2px;
+}
+.nudge-text {
+  flex: 1;
+  min-width: 0;
+}
+.nudge-note {
+  margin-top: 4px;
+  color: var(--text-2);
+}
+.cal-sub {
+  display: grid;
+  gap: 10px;
+}
+.cal-sub-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
