@@ -31,6 +31,7 @@ export function RoomLayout() {
           <NavLink to={`/rooms/${room.id}`} end>
             Home
           </NavLink>
+          <NavLink to={`/rooms/${room.id}/members`}>Members</NavLink>
           {canManageJoins && (
             <NavLink to={`/rooms/${room.id}/join-requests`}>
               Join requests{pending > 0 && ` (${pending})`}
