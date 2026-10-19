@@ -36,12 +36,17 @@ export function ResultFields(props: {
           value={props.url}
           maxLength={2000}
           aria-invalid={props.error ? true : undefined}
-          aria-describedby="result-url-hint"
+          aria-describedby={props.url.trim() && !props.error ? 'result-url-hint result-share-note' : 'result-url-hint'}
           onChange={(e) => props.onUrl(e.target.value)}
         />
         <span className={props.error ? 'err' : 'hint'} id="result-url-hint" role={props.error ? 'alert' : undefined}>
           {props.error ?? RESULT_HINT}
         </span>
+        {props.url.trim() && !props.error && (
+          <span className="share-note" id="result-share-note">
+            Check it's shared with “Anyone with the link”, or the room will be asked to request access.
+          </span>
+        )}
       </div>
       {props.url.trim() && (
         <div className="field">

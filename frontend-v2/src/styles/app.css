@@ -1491,3 +1491,11 @@ a.row:hover {
   max-width: 100%;
   min-width: 0;
 }
+.share-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--attn);
+  padding: 6px 10px;
+  border-radius: var(--r);
+  background: var(--attn-soft);
+}
