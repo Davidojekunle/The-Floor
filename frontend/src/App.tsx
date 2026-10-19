@@ -4,12 +4,14 @@ import { LoginPage } from './pages/loginPage'
 import { RegisterPage } from './pages/registerPage'
 import { RoomsPage } from './pages/roomsPage'
 import { JoinPage } from './pages/joinPage'
-
+import { MembersPage } from './pages/MembersPage'
 import { RoomLayout } from './components/roomLayout'
 import { RoomProvider } from './room/roomProvider'
 import { JoinRequestsPage } from './pages/JoinRequestsPage'
 import { RoomHomePage } from './pages/RoomHomePage'
 import { RoomSettingsPage } from './pages/RoomSettingsPage'
+import { TaskDetailPage } from './pages/TaskDetailPage'
+
 export default function App() {
   return (
     <Routes>
@@ -35,6 +37,8 @@ export default function App() {
     </Route>
   </Route>
 </Route>
+<Route path="members" element={<MembersPage />} />
+<Route path="tasks/:taskId" element={<TaskDetailPage />} />
 </Routes>
 
 
