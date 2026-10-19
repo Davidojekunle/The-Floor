@@ -17,6 +17,8 @@ from app.models.task import Stage, StageAssignee
 from app.permissions.rules import RoomContext, can
 from app.schemas.task import StageCreate, StageUpdate, StatusUpdate, TaskDetail
 from app.services import chat_service
+from app.services import notification_service as notes
+from app.realtime import events as live
 from app.services import stage_logic as logic
 from app.services import task_common as common
 from app.utils.time import as_utc, utcnow
@@ -26,11 +28,16 @@ MAX_STAGES = 30
 FIRST_PARALLEL = "The first stage can't run in parallel with a previous stage."
 
 
-def _finish(db: Session, ctx: RoomContext, task, stages: list[Stage]) -> TaskDetail:
-    """After any change: positions, flags and locks are made consistent, then the task is returned."""
+def _finish(db: Session, ctx: RoomContext, task, stages: list[Stage], before: dict) -> TaskDetail:
+    """After any change: positions, flags and locks are made consistent, then the task is returned.
+
+    before: notes.snapshot() taken when the stages were loaded, so the right people hear about
+    stages that just became ready, or that they were just assigned to."""
     logic.renumber(stages)
     logic.recompute_locks(stages)
+    notes.stage_changes(db, ctx, task, stages, before)
     common.touch(task)
+    live.task_changed(db, task)
     db.commit()
     return common.build_detail(db, ctx, task, stages)
 
@@ -47,7 +54,8 @@ def _load_for_edit(db: Session, ctx: RoomContext, task_id: uuid.UUID):
     task = common.load_task(db, ctx, task_id)
     if not common.can_edit_stages(ctx, task):
         raise Forbidden("You can't edit the stages of this task.")
-    return task, common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id)
+    return task, stages, notes.snapshot(db, stages)
 
 
 def _set_assignees(db: Session, stage: Stage, user_ids) -> None:
@@ -59,7 +67,7 @@ def _set_assignees(db: Session, stage: Stage, user_ids) -> None:
 # ------------------------------------------------------------------ add
 
 def add_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, body: StageCreate) -> TaskDetail:
-    task, stages = _load_for_edit(db, ctx, task_id)
+    task, stages, before = _load_for_edit(db, ctx, task_id)
     n = len(stages)
 
     errors: dict[str, str] = {}
@@ -93,13 +101,13 @@ def add_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, body: StageCrea
     db.flush()
     _set_assignees(db, stage, body.assignee_ids)
     stages.insert(position - 1, stage)
-    return _finish(db, ctx, task, stages)
+    return _finish(db, ctx, task, stages, before)
 
 
 # ------------------------------------------------------------------ update (structure)
 
 def update_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, body: StageUpdate) -> TaskDetail:
-    task, stages = _load_for_edit(db, ctx, task_id)
+    task, stages, before = _load_for_edit(db, ctx, task_id)
     idx = _find(stages, stage_id)
     stage = stages[idx]
     n = len(stages)
@@ -146,7 +154,7 @@ def update_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uu
     if new_position != idx + 1:
         stages.pop(idx)
         stages.insert(new_position - 1, stage)
-    return _finish(db, ctx, task, stages)
+    return _finish(db, ctx, task, stages, before)
 
 
 # ------------------------------------------------------------------ status
@@ -154,6 +162,7 @@ def update_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uu
 def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, body: StatusUpdate) -> TaskDetail:
     task = common.load_task(db, ctx, task_id)
     stages = common.load_stages(db, task.id)
+    before = notes.snapshot(db, stages)
     idx = _find(stages, stage_id)
     stage = stages[idx]
     if not common.is_approved(task):
@@ -199,18 +208,21 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
         post("stage_blocked", stage=stage, detail={"reason": stage.blocked_reason})
     elif old == StageStatus.DONE and new == StageStatus.IN_PROGRESS:
         post("stage_reopened", stage=stage)
-    return _finish(db, ctx, task, stages)
+    return _finish(db, ctx, task, stages, before)
 
 
 # ------------------------------------------------------------------ delete
 
 def delete_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID) -> TaskDetail:
-    task, stages = _load_for_edit(db, ctx, task_id)
+    task, stages, before = _load_for_edit(db, ctx, task_id)
     idx = _find(stages, stage_id)
     if len(stages) == 1:
         raise LastStage("A task needs at least one stage.")
 
     stage = stages.pop(idx)
     db.execute(delete(StageAssignee).where(StageAssignee.stage_id == stage.id))
+    from app.services import progress_service
+
+    progress_service.delete_for_stage(db, stage.id)
     db.delete(stage)
-    return _finish(db, ctx, task, stages)  # renumber also clears a parallel flag that landed on the new first stage
+    return _finish(db, ctx, task, stages, before)  # renumber also clears a parallel flag that landed on the new first stage

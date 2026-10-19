@@ -27,7 +27,8 @@ AUTHED_RESPONSES = {
     404: err("Not found, or the caller is not an active member of the room."),
     409: err(
         "Conflicts with the current state. Match on `code`: INVALID_TRANSITION, LATER_STAGES_STARTED, "
-        "LAST_STAGE, TASK_NOT_APPROVED, ALREADY_APPROVED, ALREADY_HEAD, ALREADY_MEMBER, ALREADY_REQUESTED, "
+        "LAST_STAGE, TASK_NOT_APPROVED, ALREADY_APPROVED, ALREADY_HEAD, HEAD_MUST_TRANSFER, ALREADY_MEMBER, "
+        "ALREADY_REQUESTED, "
         "REQUEST_NOT_PENDING, MEMBER_NOT_ACTIVE, "
         "or CONFLICT (duplicate name)."
     ),
@@ -35,7 +36,14 @@ AUTHED_RESPONSES = {
 
 # Precise, per-route declarations for the auth endpoints
 REGISTER_RESPONSES = {409: err("Email already registered. `fields.email` is set.")}
-LOGIN_RESPONSES = {401: err("INVALID_CREDENTIALS: wrong email or password.")}
+LOGIN_RESPONSES = {
+    401: err("INVALID_CREDENTIALS: wrong email or password."),
+    403: err("Missing the X-Taskroom-Client: web header."),
+}
+SESSION_RESPONSES = {
+    401: err("No session, or it has ended or expired. Show the sign-in screen."),
+    403: err("Missing the X-Taskroom-Client: web header."),
+}
 ME_RESPONSES = {401: err("Missing, invalid, or expired token.")}
 MY_TASKS_RESPONSES = {
     401: err("Missing, invalid, or expired token."),

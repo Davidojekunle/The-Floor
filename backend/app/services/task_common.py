@@ -240,6 +240,16 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
         u = users.get(uid) if uid else None
         return UserBrief(id=u.id, name=u.name) if u else None
 
+    from app.models.progress import ProgressUpdate  # local: keeps imports one-directional
+
+    update_counts = dict(
+        db.execute(
+            select(ProgressUpdate.stage_id, func.count())
+            .where(ProgressUpdate.stage_id.in_(stage_ids))
+            .group_by(ProgressUpdate.stage_id)
+        ).all()
+    ) if stage_ids else {}
+
     mine = my_stage_ids(db, ctx, stages)
     can_edit, can_override = can(ctx, "stage.edit"), can(ctx, "stage.override_lock")
     step_of = logic.steps(stages)
@@ -272,6 +282,7 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
                 involves_me=s.id in mine,
                 allowed_statuses=allowed,
                 can_update_status=bool(allowed),
+                update_count=update_counts.get(s.id, 0),
             )
         )
 

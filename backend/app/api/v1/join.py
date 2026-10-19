@@ -5,6 +5,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.room import JoinPreview, MembershipOut
+from app.core.ratelimit import HOUR, limiter
 from app.services import room_service
 
 router = APIRouter()
@@ -17,4 +18,5 @@ def preview_invite(invite_code: str, user: User = Depends(get_current_user), db:
 
 @router.post("/{invite_code}", response_model=MembershipOut, status_code=201)
 def request_to_join(invite_code: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    limiter.hit(f"join:user:{user.id}", 10, HOUR)
     return room_service.request_join(db, user, invite_code)

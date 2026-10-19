@@ -18,4 +18,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    theme: Mapped[str] = mapped_column(String(10), default="system", server_default="system")  # system | light | dark
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # access tokens issued before this moment (whole seconds) are rejected: sign-out takes effect at once
+    sessions_valid_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

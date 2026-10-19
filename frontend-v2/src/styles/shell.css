@@ -1,0 +1,931 @@
+/* Layout v3: the app shell (sidebar / phone bars), sheets, and phone ergonomics. Tokens only.
+   Phone breakpoint: 760px (PHONE_QUERY in lib/useMedia.ts). */
+
+:root {
+  /* The sidebar stays dark in both themes. */
+  --side-bg: #161616;
+  --side-fg: #f4f4f3;
+  --side-muted: #a3a3a0;
+  --side-hover: rgba(255, 255, 255, 0.06);
+  --side-line: rgba(255, 255, 255, 0.08);
+  --side-active-bg: rgba(255, 255, 255, 0.1);
+  --side-active-fg: #ffffff;
+  --side-attn: #f5b54a;
+  --material: color-mix(in srgb, var(--surface) 78%, transparent);
+  --ptop-h: calc(52px + env(safe-area-inset-top, 0px));
+  --tab-h: calc(56px + env(safe-area-inset-bottom, 0px));
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --side-bg: #0d0d0d;
+  }
+}
+:root[data-theme='dark'] {
+  --side-bg: #0d0d0d;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent; /* we draw our own pressed states */
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Shell ---------- */
+.shell {
+  --side-w: 248px;
+  display: grid;
+  grid-template-columns: var(--side-w) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh; /* collapsing snaps: animating the grid columns would reflow the whole app every frame */
+}
+.shell.mini {
+  --side-w: 68px;
+}
+.pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.pane-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pane-scroll:focus {
+  outline: none;
+}
+/* Chat fills the pane; only its message list scrolls. */
+.pane-scroll.fill {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pane-scroll.fill > .full-bleed {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pane-scroll.fill .chat-screen {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+/* ---------- Sidebar (desktop) ---------- */
+.sidebar {
+  background: var(--side-bg);
+  color: var(--side-fg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  /* Not overflow: hidden. Its menus open outside it (beside the icon strip when collapsed),
+     so it sits above the pane instead. The nav list clips itself (.side-scroll scrolls). */
+  position: relative;
+  z-index: 35;
+}
+.side-top {
+  padding: 10px 8px 6px;
+  border-bottom: 1px solid var(--side-line);
+}
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--side-fg);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+}
+.switcher:hover,
+.switcher[aria-expanded='true'] {
+  background: var(--side-hover);
+}
+.side-sq {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--side-hover);
+  color: var(--side-fg);
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex: none;
+  text-transform: uppercase;
+}
+.side-sq.big {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 15px;
+  background: var(--side-active-bg);
+  color: var(--side-active-fg);
+}
+.sw-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.25;
+}
+.sw-text strong {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-text small {
+  font-size: 12px;
+  color: var(--side-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-chev {
+  color: var(--side-muted);
+  display: grid;
+}
+.side-top .menu {
+  left: 0;
+  width: 300px;
+  top: calc(100% + 4px);
+  color: var(--text);
+}
+.side-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  display: grid;
+  align-content: start;
+  gap: 1px;
+}
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 7px;
+  color: var(--side-muted);
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.side-item:hover {
+  background: var(--side-hover);
+  color: var(--side-fg);
+  text-decoration: none;
+}
+.side-item.active {
+  background: var(--side-active-bg);
+  color: var(--side-active-fg);
+}
+.side-item .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-rule {
+  height: 1px;
+  background: var(--side-line);
+  margin: 8px 6px;
+}
+/* Counts in the sidebar are plain numbers. Amber means it's waiting on you; unread messages are just brighter. */
+.side-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--side-attn);
+  font-variant-numeric: tabular-nums;
+}
+.side-badge.is-msg {
+  font-weight: 500;
+  color: var(--side-fg);
+}
+.sw-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--attn-dot);
+  flex: none;
+}
+.mini-dot {
+  display: none;
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--attn-dot);
+  box-shadow: 0 0 0 2px var(--side-bg);
+}
+.mini-dot.is-msg {
+  background: var(--side-fg);
+}
+.side-foot {
+  border-top: 1px solid var(--side-line);
+  padding: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.side-foot .menu-wrap:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.side-me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--side-fg);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 500;
+}
+.side-me:hover {
+  background: var(--side-hover);
+}
+.me-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-foot .menu {
+  transform-origin: bottom left;
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 240px;
+  color: var(--text);
+}
+.side-mini-btn {
+  color: var(--side-muted);
+  flex: none;
+}
+.side-mini-btn:hover {
+  background: var(--side-hover);
+  color: var(--side-fg);
+}
+
+/* Collapsed: an icon strip. Labels become tooltips, counts become dots. */
+.shell.mini .sw-text,
+.shell.mini .sw-chev,
+.shell.mini .sw-count,
+.shell.mini .nm,
+.shell.mini .side-badge,
+.shell.mini .me-text {
+  display: none;
+}
+.shell.mini .mini-dot {
+  display: block;
+}
+.shell.mini .switcher,
+.shell.mini .side-item {
+  justify-content: center;
+  padding: 0;
+}
+.shell.mini .switcher {
+  height: 46px;
+}
+.shell.mini .side-item {
+  height: 40px;
+}
+.shell.mini .side-foot {
+  flex-direction: column;
+}
+.shell.mini .side-me {
+  justify-content: center;
+  padding: 6px 0;
+}
+.shell.mini .side-top .menu {
+  left: calc(100% + 10px);
+  top: 0;
+}
+.shell.mini .side-foot .menu {
+  left: calc(100% + 10px);
+  bottom: 0;
+}
+
+/* ---------- Menus: icon labels and unread rooms ---------- */
+.mi {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.mi svg.i {
+  color: var(--text-2);
+}
+.ri.unread {
+  font-weight: 700;
+}
+
+/* ---------- Phone: top bar, tab bar ---------- */
+.ptop,
+.tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.ptop {
+  top: 0;
+  height: var(--ptop-h);
+  padding: env(safe-area-inset-top, 0px) max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.ptop .spacer {
+  flex: 1;
+}
+.ptop-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  max-width: 72vw;
+  padding: 0 10px 0 6px;
+  border: 0;
+  background: none;
+  border-radius: 10px;
+  font-weight: 650;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  position: relative;
+}
+.ptop-switch:active {
+  background: var(--hover);
+}
+.ptop-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ptop-switch svg.i {
+  flex: none;
+  color: var(--text-3);
+}
+.ptop-dot {
+  position: absolute;
+  top: 8px;
+  left: 26px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--attn-dot);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.ptop-me {
+  width: 44px;
+  height: 44px;
+}
+
+.tabbar {
+  bottom: 0;
+  height: var(--tab-h);
+  padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px));
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.tabbar .menu-wrap {
+  display: grid;
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 56px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.tab:hover {
+  text-decoration: none;
+}
+.tab.active {
+  color: var(--accent);
+}
+.tab-ico {
+  position: relative;
+  display: grid;
+  transition: transform 0.12s var(--ease-out);
+}
+.tab:active .tab-ico {
+  transform: scale(0.94);
+}
+.tab-badge {
+  position: absolute;
+  top: -4px;
+  left: 14px;
+  width: max-content;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  background: var(--attn-dot);
+  color: var(--on-attn);
+  box-shadow: 0 0 0 2px var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.tab-badge.is-msg {
+  background: var(--text);
+  color: var(--surface);
+}
+
+@media (max-width: 760px) {
+  .shell,
+  .shell.mini {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Content scrolls under the translucent bars. */
+  .pane-scroll {
+    padding-top: var(--ptop-h);
+    padding-bottom: var(--tab-h);
+    scroll-padding-top: var(--ptop-h);
+  }
+  /* While typing, the keyboard needs the room: the tab bar steps aside. */
+  .shell:has(.pane :is(input, textarea, select):focus) .tabbar {
+    display: none;
+  }
+  .shell:has(.pane :is(input, textarea, select):focus) .pane-scroll {
+    padding-bottom: 0;
+  }
+  .toast {
+    bottom: calc(var(--tab-h) + 12px);
+  }
+}
+
+/* ---------- Sheets (phone menus and dialogs) ---------- */
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+  opacity: 0;
+}
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 32px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transform: translate3d(0, 100%, 0); /* the spring takes over before the first paint */
+  will-change: transform;
+}
+.sheet-grab {
+  flex: none;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  cursor: grab;
+}
+.sheet-grab span {
+  width: 38px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--border-strong);
+}
+.sheet-title {
+  flex: none;
+  padding: 0 20px 12px;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  touch-action: none;
+}
+.sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 10px 8px;
+}
+.sheet-head {
+  padding: 0 10px 10px;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+.sheet-head strong {
+  color: var(--text);
+  font-size: 15px;
+}
+.sheet-list {
+  display: grid;
+}
+.sheet-list hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 6px 10px;
+}
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  border-radius: 12px;
+  font-size: 16px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.sheet-item:active {
+  background: var(--hover);
+}
+.sheet-item.danger {
+  color: var(--danger);
+}
+.sheet-item .ri {
+  flex: 1;
+}
+.sheet-item .ri small {
+  font-size: 13px;
+}
+.sheet-item.cancel {
+  justify-content: center;
+  font-weight: 600;
+  background: var(--subtle);
+}
+.sheet-foot {
+  flex: none;
+  padding: 6px 10px 10px;
+}
+.sheet-dialog {
+  padding: 0 10px 6px;
+  display: grid;
+  gap: 14px;
+}
+.sheet-actions {
+  display: flex;
+  flex-direction: column-reverse; /* the main action sits on top, Cancel below */
+  gap: 8px;
+}
+.sheet-actions .btn {
+  width: 100%;
+  height: 50px;
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+/* ---------- Pressed states and phone ergonomics ---------- */
+.btn:active:not(:disabled),
+.icon-btn:active,
+.seg button:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease-out;
+}
+.row.link:active {
+  background: var(--hover);
+}
+
+@media (max-width: 760px) {
+  .container {
+    padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  }
+  .page {
+    padding-block: 20px 32px;
+    gap: 24px;
+  }
+  h1 {
+    font-size: 24px;
+    letter-spacing: -0.02em;
+  }
+  /* 44px targets, and 16px inputs so iOS doesn't zoom in when one is focused. */
+  .btn {
+    height: 44px;
+  }
+  .btn.sm {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .input,
+  .select {
+    height: 44px;
+    font-size: 16px;
+  }
+  .textarea,
+  .composer-box textarea {
+    font-size: 16px;
+  }
+  .form-card {
+    padding: 16px;
+  }
+  .row {
+    min-height: 64px;
+  }
+  /* Approve / decline: the buttons get their own line, the name keeps its width. */
+  .decide-row {
+    flex-wrap: wrap;
+  }
+  .decide-row .end {
+    width: 100%;
+    padding-left: 56px;
+    display: flex;
+    gap: 8px;
+  }
+  .decide-row .end .btn {
+    flex: 1;
+  }
+  /* Chat: message actions sit in the corner instead of taking a line of their own. */
+  .msg-tools {
+    top: 4px;
+    right: 6px;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .msg-tools .icon-btn,
+  .msg-tools .menu-wrap .icon-btn {
+    width: 36px;
+    height: 36px;
+    color: var(--text-3);
+  }
+}
+@media (hover: none) and (max-width: 760px) {
+  .msg-tools {
+    display: flex;
+    position: absolute;
+    grid-column: auto;
+  }
+  .msg:has(.msg-tools) {
+    padding-right: 44px;
+  }
+}
+
+/* ---------- Accessibility preferences ---------- */
+@media (prefers-reduced-transparency: reduce) {
+  .ptop,
+  .tabbar {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .ptop,
+  .tabbar {
+    background: var(--surface);
+    border-color: var(--border-strong);
+  }
+}
+/* ---------- Room home (two columns) ---------- */
+.container:has(> .home) {
+  max-width: 1240px;
+}
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'tasks top'
+    'tasks bottom';
+  gap: 20px 32px;
+  align-items: start;
+}
+.home-tasks {
+  grid-area: tasks;
+  gap: 20px;
+}
+.rail-top {
+  grid-area: top;
+}
+.rail-bottom {
+  grid-area: bottom;
+}
+.rail {
+  display: grid;
+  gap: 20px;
+}
+.rail:empty {
+  display: none;
+}
+.rail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.rail-card > h3 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  padding: 14px 16px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.rail-card > h3 .link-btn {
+  font-size: 13px;
+  font-weight: 500;
+}
+.rail-rows > .row {
+  padding: 10px 16px;
+  min-height: 0;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+}
+.rail-rows > .row .end.wrap-ok {
+  width: 100%;
+  padding-left: 22px;
+}
+.rail-rows .empty-line {
+  padding: 2px 16px 14px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.task-group {
+  display: grid;
+  gap: 8px;
+}
+.grp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-2);
+  padding: 0 2px;
+  margin: 0;
+}
+.grp .n {
+  color: var(--text-3);
+  font-weight: 500;
+}
+.grp.overdue {
+  color: var(--danger);
+}
+.grp-btn {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  justify-self: start;
+  min-height: 32px;
+}
+.tl {
+  display: grid;
+  gap: 2px;
+  padding: 0 8px 10px;
+}
+.tl-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--text);
+}
+.tl-row:hover {
+  background: var(--hover);
+  text-decoration: none;
+}
+.tl-day {
+  text-align: center;
+  line-height: 1.1;
+}
+.tl-day small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.tl-day strong {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tl-text {
+  display: grid;
+  min-width: 0;
+}
+.tl-text .title {
+  font-weight: 500;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-text .meta {
+  font-size: 12px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.act {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.act:last-child {
+  padding-bottom: 14px;
+}
+.act .ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+.act time {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+}
+@media (max-width: 1180px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: 'top' 'tasks' 'bottom';
+  }
+}
+@media (max-width: 760px) {
+  .home-grid {
+    gap: 24px;
+  }
+  .rail-bottom {
+    display: none; /* the groups and the Chat tab already cover these on a phone */
+  }
+  .home .page-head .btn {
+    height: 40px;
+  }
+}

@@ -1,13 +1,16 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_room_context
 from app.db.session import get_db
 from app.permissions.rules import RoomContext
 from app.schemas.task import StageCreate, StageUpdate, StatusUpdate, TaskDetail
-from app.services import stage_service
+from app.schemas.progress import UpdateCreate, UpdateOut, UpdatePage
+from app.services import progress_service, stage_service
 
 router = APIRouter()
 # Every route here returns the FULL updated task, so the UI never shows stale progress.
@@ -47,3 +50,40 @@ def delete_stage(
     task_id: uuid.UUID, stage_id: uuid.UUID, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)
 ):
     return stage_service.delete_stage(db, ctx, task_id, stage_id)
+
+
+# ------------------------------------------------------------------ progress updates (phase 6b)
+
+@router.get("/{stage_id}/updates", response_model=UpdatePage)
+def list_stage_updates(
+    task_id: uuid.UUID,
+    stage_id: uuid.UUID,
+    before: Annotated[uuid.UUID | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    ctx: RoomContext = Depends(get_room_context),
+    db: Session = Depends(get_db),
+):
+    return progress_service.list_stage_updates(db, ctx, task_id, stage_id, before, limit)
+
+
+@router.post("/{stage_id}/updates", response_model=UpdateOut, status_code=201)
+def post_stage_update(
+    task_id: uuid.UUID,
+    stage_id: uuid.UUID,
+    body: UpdateCreate,
+    ctx: RoomContext = Depends(get_room_context),
+    db: Session = Depends(get_db),
+):
+    return progress_service.post_update(db, ctx, task_id, stage_id, body)
+
+
+@router.delete("/{stage_id}/updates/{update_id}", status_code=204)
+def delete_stage_update(
+    task_id: uuid.UUID,
+    stage_id: uuid.UUID,
+    update_id: uuid.UUID,
+    ctx: RoomContext = Depends(get_room_context),
+    db: Session = Depends(get_db),
+):
+    progress_service.delete_update(db, ctx, task_id, stage_id, update_id)
+    return Response(status_code=204)

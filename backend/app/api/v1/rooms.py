@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_room_context
@@ -9,6 +9,8 @@ from app.models.user import User
 from app.permissions.rules import RoomContext
 from app.schemas.common import PageParams, page_params
 from app.schemas.room import (
+    DeleteRoom,
+    TransferHead,
     InviteOut,
     JoinRequestPage,
     MembershipOut,
@@ -16,7 +18,7 @@ from app.schemas.room import (
     RoomOut,
     RoomSummaryPage,
 )
-from app.services import room_service
+from app.services import lifecycle_service, room_service
 
 router = APIRouter()
 
@@ -70,3 +72,28 @@ def reject_join_request(
     membership_id: uuid.UUID, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)
 ):
     return room_service.decide_join_request(db, ctx, membership_id, approve=False)
+
+
+# ------------------------------------------------------------------ lifecycle
+
+@router.post("/{room_id}/leave", status_code=204)
+def leave_room(ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    lifecycle_service.leave_room(db, ctx)
+    return Response(status_code=204)
+
+
+@router.post("/{room_id}/transfer-head", response_model=RoomOut)
+def transfer_head(
+    body: TransferHead,
+    ctx: RoomContext = Depends(get_room_context),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    lifecycle_service.transfer_head(db, ctx, body.membership_id)
+    return room_service.room_out(db, room_service.get_room_context(db, ctx.room.id, user))  # your new role
+
+
+@router.delete("/{room_id}", status_code=204)
+def delete_room(body: DeleteRoom, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    lifecycle_service.delete_room(db, ctx, body.confirm_name)
+    return Response(status_code=204)

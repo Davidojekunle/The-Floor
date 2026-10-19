@@ -42,6 +42,7 @@ class StageOut(BaseModel):
     involves_me: bool
     allowed_statuses: list[StageStatusName]
     can_update_status: bool
+    update_count: int = 0  # progress updates posted on this stage
 
 
 class TaskDetail(BaseModel):

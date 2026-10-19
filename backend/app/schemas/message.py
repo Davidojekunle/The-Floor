@@ -72,8 +72,19 @@ class TempHeadRevokedEvent(_Event):
     detail: None = None
 
 
+class MemberLeftEvent(_Event):
+    type: Literal["member_left"]
+    detail: None = None
+
+
+class HeadTransferredEvent(_Event):
+    type: Literal["head_transferred"]
+    detail: None = None
+
+
 MessageEvent = Annotated[
     Union[
+        MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
     ],
@@ -83,6 +94,7 @@ MessageEvent = Annotated[
 EVENT_MODELS = {
     m.model_fields["type"].annotation.__args__[0]: m
     for m in (
+        MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
     )

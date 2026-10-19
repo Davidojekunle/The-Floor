@@ -16,6 +16,7 @@ from app.schemas.common import PageParams
 from app.schemas.member import MemberOut, TagBrief
 from app.schemas.room import UserBrief
 from app.services import chat_service
+from app.realtime import events as live
 from app.utils.time import as_utc, utcnow
 
 
@@ -133,6 +134,7 @@ def set_member_tags(db: Session, ctx: RoomContext, membership_id: uuid.UUID, tag
     db.execute(delete(MembershipTag).where(MembershipTag.membership_id == m.id))
     for tag_id in wanted:
         db.add(MembershipTag(membership_id=m.id, tag_id=tag_id))
+    live.room_changed(db, ctx.room.id)
     db.commit()
     return _build_members(db, ctx.room.id, [(m, u)])[0]
 
@@ -153,23 +155,71 @@ def remove_member(db: Session, ctx: RoomContext, membership_id: uuid.UUID) -> No
         raise MemberNotActive("Only active members can be removed. Use reject for pending requests.")
 
     m.status = MembershipStatus.REMOVED
+    live.to_user(db, "room_access_lost", ctx.room.id, m.user_id, reason="removed")
+    from app.services import notification_service as notes
+    notes.removed_from_room(db, ctx, m.user_id)
+    live.room_changed(db, ctx.room.id)  # resolved at commit: the removed person is already excluded
+    release_membership(db, ctx.room.id, m)
+    db.commit()
+
+
+def _room_stage_ids(room_id):
+    return select(Stage.id).join(Task, Task.id == Stage.task_id).where(Task.room_id == room_id)
+
+
+def stages_of(db: Session, room_id, m: Membership) -> set[uuid.UUID]:
+    """Unfinished stages in this room the person is part of (assigned, or holding the stage's tag)."""
+    my_tags = select(MembershipTag.tag_id).where(MembershipTag.membership_id == m.id)
+    return set(
+        db.scalars(
+            select(Stage.id)
+            .join(Task, Task.id == Stage.task_id)
+            .where(
+                Task.room_id == room_id,
+                Stage.status != "done",
+                (Stage.id.in_(select(StageAssignee.stage_id).where(StageAssignee.user_id == m.user_id)))
+                | (Stage.tag_id.in_(my_tags)),
+            )
+        )
+    )
+
+
+def release_membership(db: Session, room_id, m: Membership) -> None:
+    """Clean-up shared by removal and leaving: tags, temp head, stage assignments."""
     db.execute(delete(MembershipTag).where(MembershipTag.membership_id == m.id))
     # a temp-head grant must not come back to life if this person is later re-approved
     db.execute(
         TempHead.__table__.update()
-        .where(TempHead.room_id == ctx.room.id, TempHead.user_id == m.user_id, TempHead.revoked_at.is_(None))
+        .where(TempHead.room_id == room_id, TempHead.user_id == m.user_id, TempHead.revoked_at.is_(None))
         .values(revoked_at=utcnow())
     )
-    # release this person's stage assignments in this room (their tag-based stages are already covered by the tag clear)
     db.execute(
-        delete(StageAssignee).where(
-            StageAssignee.user_id == m.user_id,
-            StageAssignee.stage_id.in_(
-                select(Stage.id).join(Task, Task.id == Stage.task_id).where(Task.room_id == ctx.room.id)
-            ),
+        delete(StageAssignee).where(StageAssignee.user_id == m.user_id, StageAssignee.stage_id.in_(_room_stage_ids(room_id)))
+    )
+
+
+def unstaffed(db: Session, room_id, stage_ids: set) -> list[Stage]:
+    """Of these stages, the ones nobody is left on: no assignees, and no active member holds the tag."""
+    if not stage_ids:
+        return []
+    db.flush()
+    holders = (
+        select(MembershipTag.tag_id)
+        .join(Membership, Membership.id == MembershipTag.membership_id)
+        .where(Membership.room_id == room_id, Membership.status == MembershipStatus.ACTIVE)
+    )
+    return list(
+        db.scalars(
+            select(Stage)
+            .where(
+                Stage.id.in_(stage_ids),
+                Stage.status != "done",
+                Stage.id.not_in(select(StageAssignee.stage_id)),
+                (Stage.tag_id.is_(None)) | (Stage.tag_id.not_in(holders)),
+            )
+            .order_by(Stage.task_id, Stage.position)
         )
     )
-    db.commit()
 
 
 # ------------------------------------------------------------------ temporary head (phase 5)
@@ -216,6 +266,9 @@ def set_temp_head(db: Session, ctx: RoomContext, membership_id: uuid.UUID, expir
         db, room_id=ctx.room.id, event="temp_head_granted", actor_id=ctx.membership.user_id,
         subject_id=m.user_id, detail={"expires_at": expires_at.isoformat()},
     )
+    from app.services import notification_service as notes
+    notes.temp_head_granted(db, ctx, m.user_id, expires_at)
+    live.room_changed(db, ctx.room.id)
     db.commit()
     return _build_members(db, ctx.room.id, [(m, u)])[0]
 
@@ -228,6 +281,7 @@ def revoke_temp_head(db: Session, ctx: RoomContext, membership_id: uuid.UUID) ->
         chat_service.post_system(
             db, room_id=ctx.room.id, event="temp_head_revoked", actor_id=ctx.membership.user_id, subject_id=m.user_id
         )
+        live.room_changed(db, ctx.room.id)
     db.commit()
 
 

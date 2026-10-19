@@ -1,0 +1,14 @@
+.git
+.claude
+.vscode
+.venv
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.env
+**/.env.*
+frontend/
+frontend-v2/dist
+frontend-v2/prototypes
+frontend-v2/public/type-lab.html

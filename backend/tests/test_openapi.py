@@ -28,6 +28,12 @@ def test_known_operation_names(app):
         "listMyTasks", "approveTask", "rejectTask", "resubmitTask",
         "setTempHead", "revokeTempHead",
         "listMessages", "sendMessage", "deleteMessage", "markMessagesRead",
+        "listStageUpdates", "postStageUpdate", "deleteStageUpdate", "listTaskUpdates",
+        "refreshSession", "logout", "logoutAll",
+        "leaveRoom", "transferHead", "deleteRoom", "forgotPassword", "resetPassword",
+        "updateMe", "changePassword", "changeEmail", "confirmEmail", "cancelEmailChange", "cancelEmailChangeByLink",
+        "listNotifications", "markNotificationsRead", "markNotificationRead", "getNotificationSettings",
+        "updateNotificationSettings", "muteRoom", "unmuteRoom",
     } <= ids
 
 
@@ -105,6 +111,7 @@ def test_message_event_is_a_discriminated_union(app):
     assert set(union["discriminator"]["mapping"]) == {
         "member_joined", "task_created", "task_approved", "stage_done", "stage_blocked",
         "stage_reopened", "task_completed", "temp_head_granted", "temp_head_revoked",
+        "member_left", "head_transferred",
     }
     assert "reason" in schemas["StageBlockedDetail"]["properties"]
     assert "expires_at" in schemas["TempHeadGrantedDetail"]["properties"]

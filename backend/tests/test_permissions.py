@@ -22,6 +22,7 @@ MATRIX = {
     "tempHead.manage":     (True,  False, False),
     "member.remove":       (True,  False, False),
     "room.delete":         (True,  False, False),
+    "head.transfer":       (True,  False, False),
     "invite.manage":       (True,  False, False),
     "chat.send":           (True,  True,  True),
     "chat.delete_any":     (True,  True,  False),

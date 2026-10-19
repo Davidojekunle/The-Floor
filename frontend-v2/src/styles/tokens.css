@@ -1,0 +1,94 @@
+/* Design tokens for The Floor. Components use these, never raw colours.
+   Source of truth: .claude/skills/floor-ui/references/design-system.md */
+:root {
+  --bg: #f6f6f5;
+  --surface: #ffffff;
+  --subtle: #efefed;
+  --hover: #f4f4f2;
+  --border: #e5e5e2;
+  --border-strong: #d0d0cc;
+  --text: #141414;
+  --text-2: #575754;
+  --text-3: #8b8b86;
+  --accent: #2448c8;
+  --accent-hover: #1c3aa6;
+  --accent-soft: #e8edfc;
+  --on-accent: #ffffff;
+  --attn: #a35a00;
+  --attn-dot: #f59e0b;
+  --attn-soft: #fdf3e3;
+  --on-attn: #2a1800; /* text on an --attn-dot fill, both themes */
+  --danger: #c42b2b;
+  --danger-soft: #fdeceb;
+  --ok: #17803d;
+  --ok-soft: #e6f5ec;
+  --overlay: rgba(18, 18, 22, 0.38);
+  --shadow-pop: 0 2px 4px rgba(18, 18, 22, 0.04), 0 12px 32px rgba(18, 18, 22, 0.12);
+  --av-l: 90%;
+  --av-fg-l: 30%;
+
+  /* Bricolage Grotesque for h1/h2 and big numbers, Hanken Grotesk for the UI, DM Mono for figures that line up. */
+  --font-display: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+  --font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'DM Mono', ui-monospace, Consolas, monospace;
+
+  --r: 8px;
+  --r-lg: 12px;
+  --content-max: 840px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #121212;
+    --surface: #1a1a1a;
+    --subtle: #242424;
+    --hover: #1f1f1f;
+    --border: #2c2c2c;
+    --border-strong: #3b3b3b;
+    --text: #f2f2f1;
+    --text-2: #a9a9a5;
+    --text-3: #777773;
+    --accent: #8ea3ff;
+    --accent-hover: #a9b9ff;
+    --accent-soft: #1c2340;
+    --on-accent: #0d1330;
+    --attn: #fbbf4a;
+    --attn-soft: #33270c;
+    --danger: #f47c7c;
+    --danger-soft: #3a1717;
+    --ok: #55d68a;
+    --ok-soft: #12301e;
+    --overlay: rgba(0, 0, 0, 0.6);
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+    --av-l: 28%;
+    --av-fg-l: 86%;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --subtle: #242424;
+  --hover: #1f1f1f;
+  --border: #2c2c2c;
+  --border-strong: #3b3b3b;
+  --text: #f2f2f1;
+  --text-2: #a9a9a5;
+  --text-3: #777773;
+  --accent: #8ea3ff;
+  --accent-hover: #a9b9ff;
+  --accent-soft: #1c2340;
+  --on-accent: #0d1330;
+  --attn: #fbbf4a;
+  --attn-soft: #33270c;
+  --danger: #f47c7c;
+  --danger-soft: #3a1717;
+  --ok: #55d68a;
+  --ok-soft: #12301e;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --av-l: 28%;
+  --av-fg-l: 86%;
+  color-scheme: dark;
+}

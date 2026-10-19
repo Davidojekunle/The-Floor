@@ -86,6 +86,29 @@ class AlreadyApproved(Conflict):
     code = "ALREADY_APPROVED"
 
 
+class RateLimited(AppError):
+    status_code = 429
+    code = "RATE_LIMITED"
+
+    def __init__(self, retry_after: int, message: str = "Too many attempts. Please wait and try again."):
+        super().__init__(message)
+        self.headers = {"Retry-After": str(max(1, int(retry_after)))}
+
+
+class ResetTokenInvalid(AppError):
+    status_code = 400
+    code = "RESET_TOKEN_INVALID"
+
+
+class EmailTokenInvalid(AppError):
+    status_code = 400
+    code = "EMAIL_TOKEN_INVALID"
+
+
+class HeadMustTransfer(Conflict):
+    code = "HEAD_MUST_TRANSFER"
+
+
 class AlreadyHead(Conflict):
     code = "ALREADY_HEAD"
 
@@ -118,6 +141,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=_body(exc.code, exc.message, exc.fields),
+            headers=getattr(exc, "headers", None),
         )
 
     @app.exception_handler(RequestValidationError)

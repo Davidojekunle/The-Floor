@@ -11,6 +11,7 @@ from app.schemas.member import TagOut
 from app.models.tag import MembershipTag, Tag
 from app.models.task import Stage
 from app.models.template import TemplateStage
+from app.realtime import events as live
 
 
 def _get_tag(db: Session, ctx: RoomContext, tag_id: uuid.UUID) -> Tag:
@@ -56,6 +57,7 @@ def create_tag(db: Session, ctx: RoomContext, name: str) -> TagOut:
         raise _taken_error(name)
     tag = Tag(room_id=ctx.room.id, name=name)
     db.add(tag)
+    live.room_changed(db, ctx.room.id)
     try:
         db.commit()
     except IntegrityError:  # two simultaneous creates
@@ -70,6 +72,7 @@ def rename_tag(db: Session, ctx: RoomContext, tag_id: uuid.UUID, name: str) -> T
     if _name_taken(db, ctx.room.id, name, exclude_id=tag.id):
         raise _taken_error(name)
     tag.name = name
+    live.room_changed(db, ctx.room.id)
     try:
         db.commit()
     except IntegrityError:
@@ -84,6 +87,7 @@ def delete_tag(db: Session, ctx: RoomContext, tag_id: uuid.UUID) -> None:
     # explicit, so it doesn't depend on the database's cascade settings
     db.execute(delete(MembershipTag).where(MembershipTag.tag_id == tag.id))
     db.delete(tag)
+    live.room_changed(db, ctx.room.id)
     # stages that used this tag simply become tag-less (nothing is deleted)
     db.execute(update(Stage).where(Stage.tag_id == tag.id).values(tag_id=None))
     db.execute(update(TemplateStage).where(TemplateStage.tag_id == tag.id).values(tag_id=None))

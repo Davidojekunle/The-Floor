@@ -8,23 +8,37 @@ from app.api.deps import get_current_user
 from app.core.openapi import ME_RESPONSES, MY_TASKS_RESPONSES
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import MeResponse
+from app.schemas.auth import MeResponse, UpdateMeRequest
 from app.schemas.common import PageParams, UtcDateTime, page_params_tasks
 from app.schemas.task import MyTaskPage
-from app.services import my_task_service, room_service
+from app.services import account_service, my_task_service, notification_service, room_service
 
 router = APIRouter()
 
 
-@router.get("/me", response_model=MeResponse, responses=ME_RESPONSES)
-def get_me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def build_me(db: Session, user: User) -> MeResponse:
     return MeResponse(
         id=user.id,
         name=user.name,
         email=user.email,
         timezone=user.timezone,
+        theme=user.theme,
+        pending_email=account_service.pending_email(db, user),
+        unread_notifications=notification_service.unread_count(db, user),
         rooms=room_service.list_rooms_for_user(db, user),
     )
+
+
+@router.get("/me", response_model=MeResponse, responses=ME_RESPONSES)
+def get_me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return build_me(db, user)
+
+
+@router.patch("/me", response_model=MeResponse, responses=ME_RESPONSES)
+def update_me(body: UpdateMeRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Change any of name, timezone, theme. Other tabs and devices get `account_changed`."""
+    account_service.update_profile(db, user, body.model_dump(exclude_unset=True))
+    return build_me(db, user)
 
 
 @router.get("/me/tasks", response_model=MyTaskPage, responses=MY_TASKS_RESPONSES)

@@ -16,6 +16,7 @@ from app.permissions.rules import RoomContext, can, require
 from app.schemas.message import EVENT_MODELS, MessageCreate, MessageOut, MessagePage, Ref
 from app.schemas.room import UserBrief
 from app.services import task_common
+from app.realtime import events as live
 from app.utils.time import as_utc, utcnow
 
 INVALID = "Some fields are invalid."
@@ -48,6 +49,8 @@ def _render(event: str, actor: str, subject: str, task: str, stage: str, detail:
         "stage_reopened": f"{actor} reopened {stage} on {task}",
         "temp_head_granted": f"{actor} made {subject} temporary head until {until}",
         "temp_head_revoked": f"{actor} ended {subject}'s temporary head role",
+        "member_left": f"{actor} left the room",
+        "head_transferred": f"{actor} made {subject} the head",
     }[event]
 
 
@@ -95,6 +98,7 @@ def post_system(
     )
     db.add(message)
     db.flush()
+    live.message_created(db, room_id, message.id)
     return message
 
 
@@ -233,6 +237,8 @@ def send_message(db: Session, ctx: RoomContext, body: MessageCreate) -> MessageO
         created_at=_now(db),
     )
     db.add(message)
+    db.flush()
+    live.message_created(db, ctx.room.id, message.id)
     db.commit()
     return build(db, ctx, [message])[0]
 
@@ -248,6 +254,7 @@ def delete_message(db: Session, ctx: RoomContext, message_id: uuid.UUID) -> None
         raise Forbidden("You can only delete your own messages.")
     m.deleted_at, m.deleted_by = utcnow(), ctx.membership.user_id
     m.body, m.event_detail = None, None  # the content is really gone, not just hidden
+    live.message_deleted(db, ctx.room.id, m.id)
     db.commit()
 
 

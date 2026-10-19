@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.api.v1 import auth, join, me, members, messages, rooms, stages, tags, tasks, templates
+from app.api.v1 import (
+    auth, join, me, members, messages, notifications, rooms, stages, tags, tasks, templates, unsubscribe, ws,
+)
 from app.core.openapi import AUTHED_RESPONSES
 from app.db.session import get_db
 
@@ -24,6 +26,8 @@ def health_db(db: Session = Depends(get_db)) -> dict:
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(me.router, tags=["me"])
+api_router.include_router(notifications.router, tags=["notifications"])
+api_router.include_router(unsubscribe.router, tags=["notifications"])
 api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"], responses=AUTHED_RESPONSES)
 api_router.include_router(join.router, prefix="/join", tags=["join"], responses=AUTHED_RESPONSES)
 api_router.include_router(tags.router, prefix="/rooms/{room_id}/tags", tags=["tags"], responses=AUTHED_RESPONSES)
@@ -40,3 +44,4 @@ api_router.include_router(
 api_router.include_router(
     messages.router, prefix="/rooms/{room_id}/messages", tags=["chat"], responses=AUTHED_RESPONSES
 )
+api_router.include_router(ws.router, tags=["realtime"])

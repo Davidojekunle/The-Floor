@@ -56,7 +56,7 @@ class JoinPreview(BaseModel):
 class MembershipOut(BaseModel):
     membership_id: uuid.UUID
     room_id: uuid.UUID
-    status: Literal["pending", "active", "rejected", "removed"]
+    status: Literal["pending", "active", "rejected", "removed", "left"]
 
 
 class UserBrief(BaseModel):
@@ -80,3 +80,11 @@ class RoomSummaryPage(Page[RoomSummary]):
 
 class JoinRequestPage(Page[JoinRequestItem]):
     pass
+
+
+class TransferHead(BaseModel):
+    membership_id: uuid.UUID
+
+
+class DeleteRoom(BaseModel):
+    confirm_name: str = Field(min_length=1, max_length=100)

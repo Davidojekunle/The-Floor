@@ -8,6 +8,7 @@ from app.api.deps import get_room_context
 from app.db.session import get_db
 from app.permissions.rules import RoomContext
 from app.schemas.message import MarkRead, MessageCreate, MessageOut, MessagePage
+from app.core.ratelimit import MINUTE, limiter
 from app.services import chat_service
 
 router = APIRouter()
@@ -27,6 +28,7 @@ def list_messages(
 
 @router.post("", response_model=MessageOut, status_code=201)
 def send_message(body: MessageCreate, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    limiter.hit(f"chat:{ctx.membership.user_id}:{ctx.room.id}", 30, MINUTE)
     return chat_service.send_message(db, ctx, body)
 
 

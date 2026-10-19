@@ -24,12 +24,14 @@ from app.models.template import TaskTemplate
 from app.models.user import User
 from app.schemas.common import PageParams
 from app.schemas.message import MessageCreate
+from app.schemas.progress import UpdateCreate
 from app.schemas.task import StageIn, StageUpdate, StatusUpdate, TaskCreate
 from app.schemas.template import TemplateApply, TemplateCreate, TemplateStageIn
 from app.services import (
     auth_service,
     chat_service,
     member_service,
+    progress_service,
     room_service,
     stage_service,
     tag_service,
@@ -117,6 +119,10 @@ def run(db: Session) -> dict:
         tola_ctx = room_service.get_room_context(db, ctx.room.id, users["Tola"])
         chat_service.send_message(
             db, tola_ctx, MessageCreate(body="Shooting starts tomorrow at 9", task_id=task.id, stage_id=task.stages[1].id)
+        )
+        progress_service.post_update(
+            db, tola_ctx, task.id, task.stages[1].id,
+            UpdateCreate(note="Location booked, gear checked", link_url="https://example.com/shot-list"),
         )
 
     # a member's proposal waiting for the head (approvals screen, "Requests" badge)

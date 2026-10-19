@@ -47,3 +47,27 @@ def decode_access_token(token: str) -> str:
     except jwt.PyJWTError:
         raise Unauthenticated("Invalid or expired token.")
     return payload["sub"]
+
+
+def decode_access_token_claims(token: str) -> dict:
+    """Like decode_access_token, but returns all claims (the WebSocket needs `exp`)."""
+    try:
+        return jwt.decode(
+            token,
+            get_settings().secret_key,
+            algorithms=[ALGORITHM],
+            options={"require": ["exp", "sub"]},
+        )
+    except jwt.PyJWTError:
+        raise Unauthenticated("Invalid or expired token.")
+
+
+def token_predates_sign_out(claims: dict, user) -> bool:
+    """True when the token was issued before the user's last sign-out-everywhere (inclusive: same second is fine)."""
+    cutoff = getattr(user, "sessions_valid_after", None)
+    if cutoff is None:
+        return False
+    if cutoff.tzinfo is None:  # SQLite hands back naive datetimes
+        from datetime import timezone
+        cutoff = cutoff.replace(tzinfo=timezone.utc)
+    return int(claims.get("iat", 0)) < int(cutoff.timestamp())

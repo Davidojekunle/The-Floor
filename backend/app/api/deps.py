@@ -5,7 +5,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.errors import Unauthenticated
-from app.core.security import decode_access_token
+from app.core.ratelimit import MINUTE, limiter
+from app.core.security import decode_access_token_claims, token_predates_sign_out
 from app.db.session import get_db
 from app.models.user import User
 from app.permissions.rules import RoomContext
@@ -22,15 +23,18 @@ def get_current_user(
     if creds is None:
         raise Unauthenticated("Not authenticated.")
 
-    sub = decode_access_token(creds.credentials)
+    claims = decode_access_token_claims(creds.credentials)
     try:
-        user_id = uuid.UUID(sub)
+        user_id = uuid.UUID(claims["sub"])
     except ValueError:
         raise Unauthenticated("Invalid token.")
 
     user = db.get(User, user_id)
     if user is None:
         raise Unauthenticated("Account no longer exists.")
+    if token_predates_sign_out(claims, user):
+        raise Unauthenticated("You were signed out. Please sign in again.")
+    limiter.hit(f"user:{user.id}", 300, MINUTE)  # a safety net normal use never reaches
     return user
 
 

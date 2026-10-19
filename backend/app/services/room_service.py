@@ -13,6 +13,7 @@ from app.models.user import User
 from app.permissions.rules import RoomContext, can, permissions_for_role, require, resolve_role
 from app.schemas.common import PageParams
 from app.services import chat_service
+from app.realtime import events as live
 from app.schemas.room import InviteOut, JoinPreview, JoinRequestItem, MembershipOut, RoomOut, RoomSummary, UserBrief
 from app.utils.time import as_utc, utcnow
 
@@ -208,6 +209,7 @@ def list_rooms_for_user(db: Session, user: User) -> list[RoomSummary]:
 def regenerate_invite(db: Session, ctx: RoomContext) -> InviteOut:
     require(ctx, "invite.manage")
     ctx.room.invite_code = _new_invite_code(db)
+    live.room_changed(db, ctx.room.id)
     db.commit()
     return InviteOut(invite_code=ctx.room.invite_code)
 
@@ -254,6 +256,9 @@ def request_join(db: Session, user: User, invite_code: str) -> MembershipOut:
         m.created_at = utcnow()
         m.joined_at = None
 
+    live.room_changed(db, room.id)  # heads' pending badge
+    from app.services import notification_service as notes
+    notes.join_requested(db, room, user)
     try:
         db.commit()
     except IntegrityError:  # two simultaneous requests
@@ -312,5 +317,11 @@ def decide_join_request(db: Session, ctx: RoomContext, membership_id: uuid.UUID,
             db, room_id=ctx.room.id, event="member_joined", actor_id=ctx.membership.user_id, subject_id=m.user_id
         )
         m.last_read_message_id = joined.id  # a newcomer doesn't arrive to the whole history as unread
+        live.to_user(db, "room_access_granted", ctx.room.id, m.user_id)
+        from app.services import notification_service as notes
+        notes.join_approved(db, ctx, m.user_id)
+    else:
+        live.to_user(db, "join_request_rejected", ctx.room.id, m.user_id)
+    live.room_changed(db, ctx.room.id)
     db.commit()
     return _membership_out(m)

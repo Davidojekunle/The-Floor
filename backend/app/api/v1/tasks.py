@@ -9,7 +9,8 @@ from app.db.session import get_db
 from app.permissions.rules import RoomContext
 from app.schemas.common import PageParams, UtcDateTime, page_params_tasks
 from app.schemas.task import RejectBody, TaskCreate, TaskDetail, TaskPage, TaskUpdate
-from app.services import task_service
+from app.schemas.progress import UpdatePage
+from app.services import progress_service, task_service
 
 router = APIRouter()
 
@@ -80,3 +81,14 @@ def reject_task(
 @router.post("/{task_id}/resubmit", response_model=TaskDetail)
 def resubmit_task(task_id: uuid.UUID, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
     return task_service.resubmit_task(db, ctx, task_id)
+
+
+@router.get("/{task_id}/updates", response_model=UpdatePage)
+def list_task_updates(
+    task_id: uuid.UUID,
+    before: Annotated[uuid.UUID | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    ctx: RoomContext = Depends(get_room_context),
+    db: Session = Depends(get_db),
+):
+    return progress_service.list_task_updates(db, ctx, task_id, before, limit)

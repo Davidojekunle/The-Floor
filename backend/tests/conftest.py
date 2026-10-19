@@ -2,8 +2,11 @@ import os
 
 # Set before the app is imported, so Settings can load without a real .env
 os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://taskroom:taskroom@localhost:5432/taskroom")
-os.environ.setdefault("SECRET_KEY", "test-secret")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-at-least-32-bytes-long")
 os.environ["BCRYPT_ROUNDS"] = "4"  # fast hashing in tests
+os.environ["REFRESH_COOKIE_SECURE"] = "false"  # the test client talks plain http
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # switched on only by the rate-limit tests
+os.environ["EMAIL_SENDER_ENABLED"] = "false"  # tests deliver the outbox by hand
 
 import pytest
 from fastapi.testclient import TestClient
@@ -64,6 +67,9 @@ def client(app):
 
 # ---- helpers other test files can use ----
 
+CLIENT_HEADER = {"X-Taskroom-Client": "web"}
+
+
 def register(client, email="ada@example.com", name="Ada", password="password123", timezone="Africa/Lagos"):
     return client.post(
         "/api/v1/auth/register",
@@ -72,7 +78,7 @@ def register(client, email="ada@example.com", name="Ada", password="password123"
 
 
 def login(client, email="ada@example.com", password="password123"):
-    return client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    return client.post("/api/v1/auth/login", json={"email": email, "password": password}, headers=CLIENT_HEADER)
 
 
 def auth_headers(client, email="ada@example.com", password="password123", **register_kwargs):

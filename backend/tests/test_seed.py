@@ -125,3 +125,12 @@ def test_seed_room_chat_tells_the_story_so_far(client, db):
         ("user", None, "Shooting starts tomorrow at 9"),
     ]  # the pending proposal posts nothing
     assert page["items"][0]["stage"]["title"] == "Shoot"
+
+
+def test_seed_has_a_progress_update_on_shoot(client, db):
+    result = run(db)
+    head = headers_for(client, "head@example.com")
+    (task,) = client.get(f"{API}/rooms/{result['room_id']}/tasks", headers=head).json()["items"]
+    feed = client.get(f"{API}/rooms/{result['room_id']}/tasks/{task['id']}/updates", headers=head).json()
+    assert [(u["note"], u["author"]["name"], u["stage"]["title"]) for u in feed["items"]] == [
+        ("Location booked, gear checked", "Tola", "Shoot")]

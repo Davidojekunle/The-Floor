@@ -12,6 +12,7 @@ class MembershipStatus:
     ACTIVE = "active"
     REJECTED = "rejected"
     REMOVED = "removed"
+    LEFT = "left"
 
 
 class StageStatus:

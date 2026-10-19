@@ -1,0 +1,23 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> pick this repo.
+# Frankfurt is Render's closest region to the Supabase database (AWS eu-west-1, Ireland).
+services:
+  - type: web
+    name: the-floor
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: frankfurt
+    plan: free # sleeps after ~15 idle minutes; "starter" stays awake
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL # the Supabase pooler URL, postgresql+psycopg://...; Render asks for it on first deploy
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: REFRESH_COOKIE_SECURE
+        value: "true"
+      # Render's proxy forwards from private addresses, so rate limits read the real client from X-Forwarded-For.
+      - key: TRUSTED_PROXIES
+        value: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      # "console" logs emails instead of sending them. For real email set EMAIL_BACKEND=smtp, EMAIL_FROM and SMTP_* in the dashboard.
+      - key: EMAIL_BACKEND
+        value: console

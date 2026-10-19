@@ -13,6 +13,8 @@ from app.permissions.rules import RoomContext, can, require
 from app.schemas.common import PageParams
 from app.schemas.task import TaskCreate, TaskDetail, TaskListItem, TaskUpdate
 from app.services import chat_service
+from app.services import notification_service as notes
+from app.realtime import events as live
 from app.services import stage_logic as logic
 from app.services import task_common as common
 from app.utils.time import as_utc, utcnow
@@ -84,8 +86,12 @@ def create_task(db: Session, ctx: RoomContext, body: TaskCreate) -> TaskDetail:
             db.add(StageAssignee(stage_id=stage.id, user_id=uid))
 
     logic.recompute_locks(stages)
+    live.task_changed(db, task)
     if approval == ApprovalStatus.APPROVED:  # proposals stay private: nothing posts until approval
         chat_service.post_system(db, room_id=ctx.room.id, event="task_created", actor_id=ctx.membership.user_id, task=task)
+        notes.stage_changes(db, ctx, task, stages, before={})
+    else:
+        notes.proposal_submitted(db, ctx, task)
     db.commit()
     return common.build_detail(db, ctx, task, stages)
 
@@ -218,6 +224,7 @@ def update_task(db: Session, ctx: RoomContext, task_id: uuid.UUID, body: TaskUpd
     if "due_date" in sent:
         task.due_date = new_due
     common.touch(task)
+    live.task_changed(db, task)
     db.commit()
     return common.build_detail(db, ctx, task, stages)
 
@@ -226,6 +233,10 @@ def delete_task(db: Session, ctx: RoomContext, task_id: uuid.UUID) -> None:
     task = common.load_task(db, ctx, task_id)
     if not common.can_delete_task(ctx, task):
         raise Forbidden("You can't delete this task.")
+    from app.services import progress_service
+
+    live.task_deleted(db, task)
+    progress_service.delete_for_task(db, task.id)
     stage_ids = select(Stage.id).where(Stage.task_id == task.id)
     db.execute(StageAssignee.__table__.delete().where(StageAssignee.stage_id.in_(stage_ids)))
     db.execute(Stage.__table__.delete().where(Stage.task_id == task.id))
@@ -245,10 +256,13 @@ def approve_task(db: Session, ctx: RoomContext, task_id: uuid.UUID) -> TaskDetai
         task.decided_at = now
         task.rejection_reason = None
         common.touch(task)
+        live.task_changed(db, task)
         chat_service.post_system(
             db, room_id=ctx.room.id, event="task_approved",
             actor_id=ctx.membership.user_id, subject_id=task.created_by, task=task,
         )
+        notes.proposal_decided(db, ctx, task, approved=True)
+        notes.stage_changes(db, ctx, task, common.load_stages(db, task.id), before={})  # work can start now
         db.commit()
     return common.build_detail(db, ctx, task, common.load_stages(db, task.id))
 
@@ -264,6 +278,8 @@ def reject_task(db: Session, ctx: RoomContext, task_id: uuid.UUID, reason: str |
         task.decided_at = utcnow()
         task.rejection_reason = (reason or "").strip() or None
         common.touch(task)
+        live.task_changed(db, task)
+        notes.proposal_decided(db, ctx, task, approved=False)
         db.commit()
     return common.build_detail(db, ctx, task, common.load_stages(db, task.id))
 
@@ -279,5 +295,7 @@ def resubmit_task(db: Session, ctx: RoomContext, task_id: uuid.UUID) -> TaskDeta
         task.submitted_at = utcnow()  # back in the queue as new
         task.rejection_reason = None
         common.touch(task)
+        live.task_changed(db, task)
+        notes.proposal_submitted(db, ctx, task)
         db.commit()
     return common.build_detail(db, ctx, task, common.load_stages(db, task.id))

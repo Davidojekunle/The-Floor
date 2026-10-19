@@ -21,6 +21,7 @@ ALL_PERMISSIONS = (
     "tempHead.manage",
     "member.remove",
     "room.delete",
+    "head.transfer",
     "invite.manage",
     "chat.send",
     "chat.delete_any",

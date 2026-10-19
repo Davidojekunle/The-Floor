@@ -1,0 +1,79 @@
+/* Room chat (Phase 6), laid out like Slack's main pane. Approved 2026-10-18; see flows.md F15. */
+.count.msg { background: var(--accent); color: var(--on-accent); }
+.chat-screen { display: flex; flex-direction: column; background: var(--surface); height: 640px; min-height: 360px; }
+.chan-head { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px max(20px, env(safe-area-inset-right, 0px)) 8px max(20px, env(safe-area-inset-left, 0px)); border-bottom: 1px solid var(--border); }
+.chan-head .name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 6px; }
+.chan-head .hash { color: var(--text-3); font-weight: 500; }
+.chan-head .sub { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chan-people { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px 3px 6px; background: none; cursor: pointer; font-size: 13px; color: var(--text-2); }
+.chan-people:hover { background: var(--hover); }
+.avstack { display: flex; }
+.avstack .avatar { width: 22px; height: 22px; font-size: 9px; border-radius: 6px; box-shadow: 0 0 0 2px var(--surface); }
+.avstack .avatar + .avatar { margin-left: -5px; }
+.chat-body { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.chat-log { flex: 1; min-height: 0; overflow-y: auto; padding: 0 0 8px; overscroll-behavior: contain; }
+.day-line { border-top: 1px solid var(--border); margin: 26px 0 -14px; }
+.day-sep { position: sticky; top: 6px; z-index: 3; display: flex; justify-content: center; pointer-events: none; margin-bottom: 4px; }
+.day-sep span { pointer-events: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 3px 14px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+.new-sep { display: flex; align-items: center; gap: 8px; margin: 6px 0; padding: 0 20px; }
+.new-sep::before { content: ""; flex: 1; border-top: 1px solid var(--danger); }
+.new-sep span { color: var(--danger); font-size: 12px; font-weight: 700; }
+.msg { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 0 10px; padding: 8px max(20px, env(safe-area-inset-right, 0px)) 8px max(20px, env(safe-area-inset-left, 0px)); position: relative; }
+.msg.cont { padding-top: 2px; padding-bottom: 2px; }
+.msg:hover, .msg:focus-within { background: var(--hover); }
+.msg .avatar { width: 36px; height: 36px; border-radius: 8px; font-size: 13px; }
+.msg .stamp { font-size: 11px; color: var(--text-3); text-align: right; line-height: 22px; visibility: hidden; font-variant-numeric: tabular-nums; }
+.msg:hover .stamp { visibility: visible; }
+.msg .who { display: flex; gap: 8px; align-items: baseline; line-height: 1.3; }
+.msg .who strong { font-weight: 700; }
+.msg time, .sys time { font-size: 12px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.msg .text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.msg.deleted .text { color: var(--text-3); font-style: italic; }
+.msg.sending .text { color: var(--text-3); }
+.attach { display: block; margin-top: 6px; padding: 2px 0 2px 12px; border: 0; border-left: 4px solid var(--border-strong); background: none; text-align: left; cursor: pointer; font-size: 13px; max-width: 100%; }
+.attach strong { color: var(--accent); font-weight: 600; }
+.attach span { color: var(--text-2); }
+.attach:hover strong { text-decoration: underline; }
+.msg-tools { position: absolute; top: -16px; right: 20px; display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, .08); padding: 2px; z-index: 4; }
+.msg:hover .msg-tools, .msg:focus-within .msg-tools, .msg-tools.open { display: flex; }
+.msg-tools .icon-btn { width: 30px; height: 30px; }
+@media (hover: none) { .msg-tools { display: flex; position: static; box-shadow: none; border: 0; grid-column: 2; justify-self: end; } }
+.sys { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 4px max(20px, env(safe-area-inset-right, 0px)) 4px max(20px, env(safe-area-inset-left, 0px)); font-size: 13px; color: var(--text-2); }
+.sys:hover { background: var(--hover); }
+.sys .sys-ico { width: 36px; display: grid; place-items: center; }
+.sys .sys-ico span { width: 22px; height: 22px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.sys .sys-ico svg.i { width: 12px; height: 12px; }
+.sys .link-btn { font-weight: 600; }
+.composer { padding: 0 max(20px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.composer-box { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); display: grid; transition: border-color .12s, box-shadow .12s; }
+.composer-box:focus-within { border-color: var(--text-3); box-shadow: 0 1px 6px rgba(0, 0, 0, .08); }
+.composer-box textarea { border: 0; outline: none; background: transparent; padding: 12px 14px 6px; resize: none; min-height: 44px; max-height: 240px; line-height: 1.45; width: 100%; }
+.composer-box .ref-chip { margin: 10px 12px 0; }
+.composer-tools { display: flex; align-items: center; gap: 2px; padding: 4px 6px 6px; }
+.composer-tools .icon-btn { width: 30px; height: 30px; }
+.send-btn { margin-left: auto; width: 34px; height: 30px; border: 0; border-radius: 6px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; cursor: pointer; }
+.send-btn:disabled { background: transparent; color: var(--text-3); cursor: default; }
+.composer-hint { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--text-3); margin-top: 4px; padding: 0 2px; }
+.ref-chip { justify-self: start; display: inline-flex; gap: 4px; align-items: center; font-size: 12px; background: var(--accent-soft); color: var(--accent); padding: 2px 2px 2px 10px; border-radius: 99px; }
+.ref-chip .icon-btn { width: 24px; height: 24px; color: var(--accent); }
+.jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; box-shadow: var(--shadow-pop); border-radius: 99px; z-index: 5; }
+.chat-empty { margin: 48px auto; text-align: center; padding: 0 24px; display: grid; gap: 6px; max-width: 420px; }
+.chat-empty h2 { font-size: 18px; }
+.chat-empty p { color: var(--text-2); }
+@media (max-width: 640px) {
+  .chan-head .sub { display: none; }
+  .composer-hint span:last-child { display: none; }
+}
+
+/* ---------- Additions for the React build ---------- */
+.full-bleed { width: 100%; }
+.day-wrap { display: contents; } /* keeps the sticky day pill scoped to the whole log */
+.chat-note { text-align: center; font-size: 12px; color: var(--text-3); margin: 16px 0 4px; min-height: 1em; }
+.sys-link { font-weight: 600; }
+.send-failed { font-size: 13px; color: var(--danger); margin-top: 2px; }
+.msg .avatar:not(.sm) { width: 36px; height: 36px; border-radius: 8px; font-size: 13px; }
+.chan-people:hover { text-decoration: none; }
+.attach:hover { text-decoration: none; }
+.msg-tools .menu-wrap .icon-btn { width: 30px; height: 30px; }
+.composer-box textarea { font: inherit; color: inherit; }
+.msg .text a { color: var(--accent); }

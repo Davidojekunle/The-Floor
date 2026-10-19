@@ -1,0 +1,392 @@
+/* Prototype-only styles. Variants use the app's tokens; the picker is fixed harness chrome (PICKER.md, verbatim). */
+
+body {
+  background: var(--bg);
+  padding-bottom: 96px;
+}
+
+/* ---------- 1. Ledger ---------- */
+.lg-list {
+  border-top: 1px solid var(--border);
+}
+.lg-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  transition: background-color 150ms ease;
+}
+.lg-row:hover {
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lg-row:hover {
+    background: var(--hover);
+  }
+}
+.lg-date {
+  display: grid;
+  justify-items: center;
+  line-height: 1.1;
+}
+.lg-date small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.lg-date strong {
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.lg-row.is-late .lg-date strong,
+.lg-row.is-late .lg-date small {
+  color: var(--danger);
+}
+.lg-row.is-done .lg-date strong {
+  color: var(--text-3);
+}
+.lg-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.lg-title {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.lg-row.is-done .lg-title {
+  color: var(--text-2);
+}
+.lg-meta {
+  font-size: 13px;
+  color: var(--text-2);
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.lg-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lg-ticks {
+  display: inline-flex;
+  gap: 3px;
+}
+.lg-ticks i {
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+.lg-ticks i[data-on] {
+  background: var(--accent);
+}
+.lg-row.is-done .lg-ticks i {
+  background: var(--ok);
+}
+.lg-frac {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* ---------- 2. Hand-off ---------- */
+.ho-list {
+  overflow: hidden;
+}
+.ho-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px 15px;
+  min-height: 68px;
+  color: var(--text);
+  transition: background-color 150ms ease;
+}
+.ho-row + .ho-row {
+  border-top: 1px solid var(--border);
+}
+.ho-row:hover {
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ho-row:hover {
+    background: var(--hover);
+  }
+}
+.ho-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.ho-task {
+  font-size: 13px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ho-now {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  min-width: 0;
+}
+.ho-row.is-done .ho-now {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.ho-row.is-done .ho-now svg {
+  color: var(--ok);
+}
+.ho-flag {
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--attn);
+}
+.ho-flag.quiet {
+  color: var(--text-3);
+}
+.ho-end {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ho-frac {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.ho-line {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+}
+.ho-line > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+}
+.ho-row.is-late .ho-line > span {
+  background: var(--danger);
+}
+.ho-row.is-blocked .ho-line > span {
+  background: var(--attn-dot);
+}
+.ho-row.is-done .ho-line > span {
+  background: var(--ok);
+}
+
+/* ---------- 3. Quiet ---------- */
+.qt-list {
+  border-top: 1px solid var(--border);
+}
+.qt-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 3rem 7.5rem;
+  gap: 16px;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 10px 0 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  transition: background-color 150ms ease;
+}
+.qt-row:hover {
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .qt-row:hover {
+    background: var(--hover);
+  }
+}
+.qt-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.qt-row.is-late::before {
+  background: var(--danger);
+}
+.qt-row.is-blocked::before {
+  background: var(--attn-dot);
+}
+.qt-row.is-idle::before {
+  background: var(--border-strong);
+}
+.qt-row.is-done::before {
+  background: var(--ok);
+}
+.qt-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qt-row.is-done .qt-title {
+  color: var(--text-2);
+}
+.qt-stage {
+  font-size: 13px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qt-row.is-blocked .qt-stage {
+  color: var(--attn);
+}
+.qt-frac,
+.qt-due {
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.qt-frac {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-3);
+}
+.qt-due {
+  color: var(--text-2);
+}
+.qt-row.is-late .qt-due {
+  color: var(--danger);
+}
+
+@media (max-width: 760px) {
+  .lg-ticks {
+    display: none;
+  }
+  .qt-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title due'
+      'stage frac';
+    gap: 2px 12px;
+    padding-block: 11px;
+  }
+  .qt-title {
+    grid-area: title;
+  }
+  .qt-due {
+    grid-area: due;
+  }
+  .qt-stage {
+    grid-area: stage;
+  }
+  .qt-frac {
+    grid-area: frac;
+  }
+  .qt-row::before {
+    top: 12px;
+    bottom: 12px;
+  }
+}
+
+/* ---------- Picker (verbatim from PICKER.md) ---------- */
+.proto-picker {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.proto-picker-highlight {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  will-change: transform;
+}
+
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition:
+    transform 250ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-picker[data-ready] .proto-picker-highlight { transition: none; }
+}
+
+.proto-picker-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.proto-picker-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.proto-picker-item:active {
+  transform: scale(0.97);
+}
+
+.proto-picker-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.proto-picker-item[data-active] {
+  color: #fff;
+}
