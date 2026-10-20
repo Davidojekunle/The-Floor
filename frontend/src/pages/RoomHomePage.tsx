@@ -1,12 +1,14 @@
+import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { listTasks } from '../api/tasks'
 import { ProgressBar } from '../components/ProgressBar'
 import { formatDateTime } from '../lib/format'
-import { useRoom } from '../room/useRoom'
+import { useCan ,useRoom } from '../room/useRoom'
 
 export function RoomHomePage() {
   const { room } = useRoom()
+  const canCreate = useCan('task.create')
 
   const tasks = useQuery({
     queryKey: ['tasks', room.id, 'list'],
@@ -14,7 +16,7 @@ export function RoomHomePage() {
     refetchInterval: 45_000,
   })
 
-  let list
+  let list: ReactNode
   if (tasks.isPending) {
     list = <p>Loading tasks...</p>
   } else if (tasks.isError) {
@@ -56,7 +58,10 @@ export function RoomHomePage() {
       <h1>{room.name}</h1>
       <p className="muted">{room.member_count} members</p>
 
-      <h2>Tasks</h2>
+      <div className="task-card-top">
+        <h2>Tasks</h2>
+        {canCreate && <Link to={`/rooms/${room.id}/tasks/new`}>+ New task</Link>}
+      </div>
       {list}
     </div>
   )

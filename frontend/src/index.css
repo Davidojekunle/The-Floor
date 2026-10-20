@@ -252,3 +252,34 @@ code {
   background: #fff3bf;
   color: #8a6d00;
 }
+
+.field textarea,
+.field select {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #c9ced9;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.stage-draft {
+  background: #fff;
+  border: 1px solid #e3e6ee;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 400;
+  font-size: 0.9rem;
+}
