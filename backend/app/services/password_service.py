@@ -71,8 +71,10 @@ def reset(db: Session, raw: str, new_password: str) -> None:
     if user is None:
         raise ResetTokenInvalid("This link is invalid or has expired. Ask for a new one.")
 
+    db.commit()  # hand the connection back while bcrypt runs
+    new_hash = hash_password(new_password)
     token.used_at = now
-    user.password_hash = hash_password(new_password)
+    user.password_hash = new_hash
     session_service.sign_out_everywhere(db, user)  # including whoever had the old password
     text, html_body = email_service.render(
         "Your password was changed",

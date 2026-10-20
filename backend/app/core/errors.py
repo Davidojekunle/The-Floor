@@ -179,6 +179,15 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected(request: Request, exc: Exception):
+        from sqlalchemy.exc import TimeoutError as PoolTimeout
+
+        if isinstance(exc, PoolTimeout):  # every database connection is busy: a crowd, not a bug
+            logger.warning("Database pool exhausted on %s %s", request.method, request.url.path)
+            return JSONResponse(
+                status_code=503,
+                content=_body("SERVER_BUSY", "The Floor is busy right now. Try again in a few seconds."),
+                headers={"Retry-After": "5"},
+            )
         logger.exception("Unhandled error on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,

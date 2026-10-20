@@ -26,6 +26,7 @@ export type ErrorCode =
   | 'VALIDATION_ERROR'
   | 'METHOD_NOT_ALLOWED'
   | 'SERVER_ERROR'
+  | 'SERVER_BUSY' // 503: every database connection was busy; worth retrying in a few seconds
   | 'NETWORK_ERROR'
 
 export class ApiError extends Error {

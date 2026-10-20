@@ -63,6 +63,7 @@ def _current_family(db: Session, user: User, refresh_raw: str | None):
 def change_password(db: Session, user: User, current: str, new: str, refresh_raw: str | None) -> tuple[str, int]:
     """Every other session ends at once. This browser keeps its refresh cookie and gets a fresh access token."""
     limiter.hit(f"change-password:{user.id}", PER_USER_PER_HOUR, HOUR)
+    db.commit()  # hand the connection back during the three bcrypt runs below
     _check_password(user, current)
     if verify_password(new, user.password_hash):
         raise ValidationFailed("Choose a password you aren't using now.",

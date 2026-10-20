@@ -26,6 +26,8 @@ def register_user(db: Session, *, name: str, email: str, password: str, timezone
 
     if db.scalar(select(User).where(User.email == email)):
         raise taken
+    db.commit()  # hand the database connection back while bcrypt runs: it takes seconds on a small CPU, and a
+    # burst of sign-ins holding connections would run the pool dry
 
     user = User(name=name, email=email, password_hash=hash_password(password), timezone=timezone)
     db.add(user)
@@ -39,6 +41,8 @@ def register_user(db: Session, *, name: str, email: str, password: str, timezone
 
 def authenticate(db: Session, *, email: str, password: str) -> User:
     user = db.scalar(select(User).where(User.email == normalize_email(email)))
+    db.commit()  # hand the database connection back while bcrypt runs: it takes seconds on a small CPU, and a
+    # burst of sign-ins holding connections would run the pool dry
     if user is None:
         verify_password(password, _dummy_hash())
         raise InvalidCredentials("Incorrect email or password.")
