@@ -40,9 +40,9 @@ export function deleteTag(roomId: string, tagId: string) {
   })
 }
 
-export function listMembers(roomId: string, page = 1) {
+export function listMembers(roomId: string, page = 1, limit = 50) {
   return apiRequest<Paginated<Member>>(`/rooms/${roomId}/members`, {
-    query: { page, limit: 50 },
+    query: { page, limit },
   })
 }
 
@@ -62,3 +62,4 @@ export function removeMember(roomId: string, membershipId: string) {
     method: 'DELETE',
   })
 }
+
