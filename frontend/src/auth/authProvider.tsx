@@ -6,22 +6,19 @@ import {
   type Me,
   type RegisterInput,
 } from '../api/auth'
-import { setUnauthorizedHandler } from '../api/client'
+import { apiRequest, refreshSession, setUnauthorizedHandler } from '../api/client'
 import { AuthContext } from './authContext'
 import { tokenStorage } from './tokenStorage'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null)
-  // Only "loading" at start if there is a saved token we need to check.
-  const [loading, setLoading] = useState<boolean>(
-    () => tokenStorage.get() !== null,
-  )
+  const [loading, setLoading] = useState<boolean>(true)
 
-  // On page load, restore the session from the saved token.
+  // On page load, restore the session: from the saved token, or else from the refresh cookie.
   useEffect(() => {
-    if (!tokenStorage.get()) return
-    getMe()
-      .then(setUser)
+    const restore = tokenStorage.get() ? Promise.resolve(true) : refreshSession()
+    restore
+      .then((ok) => (ok ? getMe().then(setUser) : undefined))
       .catch(() => tokenStorage.clear())
       .finally(() => setLoading(false))
   }, [])
@@ -47,6 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
+    // Ends the session on the server too, so the refresh cookie can't sign back in.
+    apiRequest('/auth/logout', { method: 'POST', auth: false }).catch(() => {})
     tokenStorage.clear()
     setUser(null)
   }, [])
