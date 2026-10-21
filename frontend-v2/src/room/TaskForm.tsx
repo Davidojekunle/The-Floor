@@ -42,21 +42,34 @@ export function TaskForm({ initial, submitLabel, pendingLabel, cancelHref, onSub
   const tags = useQuery({ queryKey: ['tags', room.id], queryFn: () => listTags(room.id) })
   const members = useQuery({ queryKey: ['members', room.id], queryFn: () => listMembers(room.id) })
 
-  const set = (patch: Partial<DraftTask>) => setDraft((d) => ({ ...d, ...patch }))
+  // Editing a field clears its error; the rest stay until the next submit.
+  const clearErrors = (match: (key: string) => boolean) =>
+    setErrors((e) => (Object.keys(e).some(match) ? Object.fromEntries(Object.entries(e).filter(([k]) => !match(k))) : e))
+  const set = (patch: Partial<DraftTask>) => {
+    if ('title' in patch) clearErrors((k) => k === 'title')
+    if ('due' in patch) clearErrors((k) => k === 'due_date' || /^stages\.\d+\.due_date$/.test(k))
+    setDraft((d) => ({ ...d, ...patch }))
+  }
   const setStages = (fn: (s: DraftStage[]) => DraftStage[]) =>
     setDraft((d) => {
       const stages = fn(d.stages)
       if (stages[0]) stages[0] = { ...stages[0], parallel: false } // the first stage can't run in parallel
       return { ...d, stages }
     })
-  const updateStage = (i: number, patch: Partial<DraftStage>) =>
+  const updateStage = (i: number, patch: Partial<DraftStage>) => {
+    for (const field of ['title', 'due'] as const)
+      if (field in patch) clearErrors((k) => k === `stages.${i}.${field === 'due' ? 'due_date' : field}`)
     setStages((all) => all.map((s, j) => (j === i ? { ...s, ...patch } : s)))
-  const move = (i: number, by: number) =>
+  }
+  const clearStageErrors = () => clearErrors((k) => k.startsWith('stages')) // indexes shift: they'd point at the wrong row
+  const move = (i: number, by: number) => {
+    clearStageErrors()
     setStages((all) => {
       const next = [...all]
       ;[next[i], next[i + by]] = [next[i + by], next[i]]
       return next
     })
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -191,7 +204,10 @@ export function TaskForm({ initial, submitLabel, pendingLabel, cancelHref, onSub
               items.push('divider', {
                 label: 'Remove stage',
                 danger: true,
-                onSelect: () => setStages((all) => all.filter((_, j) => j !== i)),
+                onSelect: () => {
+                  clearStageErrors()
+                  setStages((all) => all.filter((_, j) => j !== i))
+                },
               })
 
             return (

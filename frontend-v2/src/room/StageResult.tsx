@@ -20,6 +20,9 @@ export function ResultFields(props: {
   onNote: (v: string) => void
   autoFocus?: boolean
 }) {
+  // The sharing reminder only once it's a real link (a typo gets its error on submit), and in place of the hint,
+  // so the dialog doesn't grow under the pointer as the link is typed.
+  const linkOk = !!props.url.trim() && !props.error && !checkLink(props.url)
   return (
     <>
       <div className="field">
@@ -36,15 +39,20 @@ export function ResultFields(props: {
           value={props.url}
           maxLength={2000}
           aria-invalid={props.error ? true : undefined}
-          aria-describedby={props.url.trim() && !props.error ? 'result-url-hint result-share-note' : 'result-url-hint'}
+          aria-describedby="result-url-hint"
           onChange={(e) => props.onUrl(e.target.value)}
         />
-        <span className={props.error ? 'err' : 'hint'} id="result-url-hint" role={props.error ? 'alert' : undefined}>
-          {props.error ?? RESULT_HINT}
-        </span>
-        {props.url.trim() && !props.error && (
-          <span className="share-note" id="result-share-note">
+        {props.error ? (
+          <span className="err" id="result-url-hint" role="alert">
+            {props.error}
+          </span>
+        ) : linkOk ? (
+          <span className="share-note" id="result-url-hint">
             Check it's shared with “Anyone with the link”, or the room will be asked to request access.
+          </span>
+        ) : (
+          <span className="hint" id="result-url-hint">
+            {RESULT_HINT}
           </span>
         )}
       </div>
