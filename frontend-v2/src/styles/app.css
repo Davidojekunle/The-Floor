@@ -1364,7 +1364,8 @@ a.row:hover {
 .result-line .link-btn {
   font-size: 13px;
 }
-.btn.danger-text {
+.btn.danger-text,
+.link-btn.danger-text {
   color: var(--danger);
 }
 .work-list {

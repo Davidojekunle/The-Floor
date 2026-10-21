@@ -75,7 +75,12 @@ export function Sheet({ title, label, children, footer, onClose }: Props) {
       [...(panel.current?.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') ?? [])].filter(
         (el) => !el.hasAttribute('disabled'),
       )
-    const first = panel.current?.querySelector<HTMLElement>('[autofocus]') ?? focusables()[0]
+    // A text field is only focused when it asks to be (autoFocus): focusing one on a phone opens the keyboard,
+    // which covers the bottom of the sheet and its buttons. Otherwise the first button, or the sheet itself.
+    const first =
+      panel.current?.querySelector<HTMLElement>('[autofocus]') ??
+      focusables().find((el) => !el.matches('input, textarea, select, [contenteditable]')) ??
+      panel.current
     first?.focus({ preventScroll: true })
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return close()
@@ -149,6 +154,7 @@ export function Sheet({ title, label, children, footer, onClose }: Props) {
       <div
         className="sheet"
         ref={panel}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}

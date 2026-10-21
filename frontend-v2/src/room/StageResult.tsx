@@ -119,7 +119,7 @@ export function DoneDialog(props: { stage: Pick<Stage, 'title'>; pending: boolea
 
 /** On a done stage: the result in one line, with Add / Change for the people who can. */
 export function StageResultLine({ task, stage: s }: { task: TaskDetail; stage: Stage }) {
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState<false | 'edit' | 'remove'>(false)
   if (!s.result && !s.can_set_result) return null
   return (
     <div className="result-line">
@@ -132,23 +132,29 @@ export function StageResultLine({ task, stage: s }: { task: TaskDetail; stage: S
         <span className="faint small">No result linked yet.</span>
       )}
       {s.can_set_result && (
-        <button className="link-btn" type="button" onClick={() => setEditing(true)}>
+        <button className="link-btn" type="button" onClick={() => setEditing('edit')}>
           {s.result ? 'Change' : 'Add the result'}
         </button>
       )}
-      {editing && <ResultDialog task={task} stage={s} onClose={() => setEditing(false)} />}
+      {s.can_set_result && s.result && (
+        <button className="link-btn danger-text" type="button" onClick={() => setEditing('remove')}>
+          Remove
+        </button>
+      )}
+      {editing && <ResultDialog task={task} stage={s} removing={editing === 'remove'} onClose={() => setEditing(false)} />}
     </div>
   )
 }
 
-function ResultDialog({ task, stage: s, onClose }: { task: TaskDetail; stage: Stage; onClose: () => void }) {
+function ResultDialog(props: { task: TaskDetail; stage: Stage; removing?: boolean; onClose: () => void }) {
+  const { task, stage: s, onClose } = props
   const queryClient = useQueryClient()
   const toast = useToast()
   const onError = useActionError(task.room_id)
   const [url, setUrl] = useState(s.result?.url ?? '')
   const [note, setNote] = useState(s.result?.note ?? '')
   const [error, setError] = useState<string>()
-  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(!!props.removing)
   const save = useMutation({
     mutationFn: (v: { url: string | null; note: string | null }) => setStageResult(task.room_id, task.id, s.id, v.url, v.note),
     onSuccess: (updated, v) => {
@@ -175,7 +181,7 @@ function ResultDialog({ task, stage: s, onClose }: { task: TaskDetail; stage: St
         confirmLabel="Remove"
         pending={save.isPending}
         onConfirm={() => save.mutate({ url: null, note: null })}
-        onClose={() => setConfirmRemove(false)}
+        onClose={() => (props.removing ? onClose() : setConfirmRemove(false))}
       />
     )
   return (
@@ -209,7 +215,7 @@ function ResultDialog({ task, stage: s, onClose }: { task: TaskDetail; stage: St
           url={url}
           note={note}
           error={error}
-          autoFocus
+          autoFocus={!s.result}
           onUrl={(v) => {
             setUrl(v)
             setError(undefined)
