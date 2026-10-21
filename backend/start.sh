@@ -14,4 +14,6 @@ if [ -n "$RENDER_EXTERNAL_URL" ]; then
 fi
 
 alembic upgrade head
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --proxy-headers --forwarded-allow-ips='*'
+# Believe X-Forwarded-For only from our own proxies (TRUSTED_PROXIES). With '*' uvicorn takes the header's
+# leftmost address, which the visitor writes themselves, so per-IP rate limits could be dodged.
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --proxy-headers --forwarded-allow-ips="${TRUSTED_PROXIES:-127.0.0.1}"
