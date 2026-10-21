@@ -82,6 +82,23 @@ def test_join_request_notifies_the_head(client):
     assert bell(client, bisi)["items"] == []
 
 
+@pytest.mark.parametrize("decision", ["approve", "reject"])
+def test_deciding_a_join_request_reads_its_notification(client, decision):
+    head = auth_headers(client, email="head@example.com", name="Ada")
+    room = create_room(client, head)
+    bisi = auth_headers(client, email="bisi@example.com", name="Bisi")
+    tola = auth_headers(client, email="tola@example.com", name="Tola")
+    bisi_id = request_join(client, bisi, room["invite_code"]).json()["membership_id"]
+    request_join(client, tola, room["invite_code"])
+    assert unread(client, head) == 2
+
+    r = client.post(f"{API}/rooms/{room['id']}/join-requests/{bisi_id}/{decision}", headers=head)
+    assert r.status_code == 200, r.text
+    assert unread(client, head) == 1  # Bisi's is handled; Tola's still waits
+    still = [n for n in bell(client, head)["items"] if not n["read"]]
+    assert [n["actor"]["name"] for n in still] == ["Tola"]
+
+
 def test_approval_notifies_the_requester(client):
     head = auth_headers(client, email="head@example.com", name="Ada")
     room = create_room(client, head)

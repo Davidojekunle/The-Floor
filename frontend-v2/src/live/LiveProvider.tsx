@@ -85,6 +85,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         case 'room_changed': // permissions, tags, members, requests, temp-head grants and expiry
           for (const key of ['room', 'members', 'tags', 'join-requests', 'tasks']) inv([key, r])
           inv(['me-tasks'])
+          inv(['notifications']) // e.g. a join request someone else handled is no longer unread
           meSoon()
           break
         case 'room_access_lost': {

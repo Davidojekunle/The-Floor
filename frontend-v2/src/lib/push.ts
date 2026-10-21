@@ -87,6 +87,7 @@ export async function enablePush(userId: string): Promise<PushState> {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'off'
   await register()
+  resumed = Promise.resolve(true)
   remember(userId, true)
   return 'on'
 }
@@ -101,11 +102,22 @@ export async function disablePush(userId: string): Promise<PushState> {
   return pushSupported() ? 'off' : 'unsupported'
 }
 
+// Whether this start's re-registration reached the server. The browser can hold a subscription the server
+// never got (it was down or busy), and then nothing arrives even though the switch says on.
+let resumed: Promise<boolean> | null = null
+
 /** After sign-in and on each start: if this person turned push on here, make sure the server still has it. */
 export async function resumePush(userId: string): Promise<void> {
   if (!pushSupported() || Notification.permission !== 'granted' || !wanted(userId)) return
-  await register().catch(() => {})
+  resumed = register().then(
+    () => true,
+    () => false,
+  )
+  await resumed
 }
+
+/** False when this start's re-registration failed. Turning the switch on again retries. */
+export const pushReachedServer = (): Promise<boolean> => resumed ?? Promise.resolve(true)
 
 /**
  * Signing out: this browser stops getting pushes for the account. With a live session the server forgets it now;

@@ -270,6 +270,17 @@ def join_requested(db: Session, room, requester: User) -> None:
         notify(db, head, "join_requested", f"{requester.name} asked to join {room.name}", room=room, actor=requester)
 
 
+def join_request_handled(db: Session, room_id, requester_id) -> None:
+    """Approved or rejected: "X asked to join" has nothing left to act on, for any head who got it.
+    Read ones don't go out by email either. The caller commits (and its room_changed refreshes the bell)."""
+    db.execute(
+        update(Notification)
+        .where(Notification.type == "join_requested", Notification.room_id == room_id,
+               Notification.actor_id == requester_id, Notification.read_at.is_(None))
+        .values(read_at=utcnow())
+    )
+
+
 def join_approved(db: Session, ctx: RoomContext, user_id) -> None:
     actor = _actor(db, ctx)
     notify(db, user_id, "join_approved", f"You're in. {actor.name} approved your request to join {ctx.room.name}",

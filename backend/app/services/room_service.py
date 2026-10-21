@@ -311,6 +311,8 @@ def decide_join_request(db: Session, ctx: RoomContext, membership_id: uuid.UUID,
         raise RequestNotPending("This request is no longer pending.")
 
     m.status = target
+    from app.services import notification_service as notes
+    notes.join_request_handled(db, ctx.room.id, m.user_id)
     if approve:
         m.joined_at = utcnow()
         joined = chat_service.post_system(
@@ -318,7 +320,6 @@ def decide_join_request(db: Session, ctx: RoomContext, membership_id: uuid.UUID,
         )
         m.last_read_message_id = joined.id  # a newcomer doesn't arrive to the whole history as unread
         live.to_user(db, "room_access_granted", ctx.room.id, m.user_id)
-        from app.services import notification_service as notes
         notes.join_approved(db, ctx, m.user_id)
     else:
         live.to_user(db, "join_request_rejected", ctx.room.id, m.user_id)
