@@ -1,6 +1,8 @@
 import { ApiError } from '../api/client'
+import { listMembers, listTags } from '../api/members'
 import type { Paginated } from '../api/room'
 import type {
+  CreateTaskInput,
   Stage,
   StageStatus,
   TaskDetail,
@@ -220,5 +222,85 @@ export async function mockSetStageStatus(
     task.updated_at = new Date().toISOString()
     recompute(task)
   }
+  return structuredClone(task)
+}
+
+export async function mockCreateTask(
+  roomId: string,
+  input: CreateTaskInput,
+): Promise<TaskDetail> {
+  await delay()
+
+  const fields: Record<string, string> = {}
+  if (input.start_date && input.start_date > input.due_date) {
+    fields.start_date = 'The start must not be after the due date.'
+  }
+  input.stages.forEach((s, i) => {
+    if (s.due_date && s.due_date > input.due_date) {
+      fields[`stages.${i}.due_date`] = 'Must not be after the task due date.'
+    }
+  })
+  if (Object.keys(fields).length > 0) {
+    throw new ApiError(422, 'VALIDATION_ERROR', 'Validation failed.', fields)
+  }
+
+  const [tagsRes, membersRes] = await Promise.all([
+    listTags(roomId),
+    listMembers(roomId, 1, 100),
+  ])
+  const tagName = new Map(tagsRes.items.map((t) => [t.id, t.name]))
+  const personName = new Map(membersRes.items.map((m) => [m.user.id, m.user.name]))
+
+  const id = `k${Date.now()}`
+  let step = 0
+  const stages: Stage[] = input.stages.map((s, i) => {
+    if (!s.parallel_with_previous) step += 1
+    return {
+      id: `${id}-s${i + 1}`,
+      title: s.title,
+      position: i + 1,
+      step,
+      parallel_with_previous: s.parallel_with_previous,
+      status: 'locked',
+      blocked_reason: null,
+      unlocked_early: false,
+      tag: s.tag_id
+        ? { id: s.tag_id, name: tagName.get(s.tag_id) ?? 'Tag' }
+        : null,
+      assignees: s.assignee_ids.map((uid) =>
+        person(uid, personName.get(uid) ?? 'Member'),
+      ),
+      due_date: s.due_date,
+      is_overdue: false,
+      completed_at: null,
+      completed_by: null,
+      allowed_statuses: [],
+      can_update_status: false,
+    }
+  })
+
+  const task = recompute({
+    id,
+    room_id: roomId,
+    title: input.title,
+    description: input.description,
+    start_date: input.start_date,
+    due_date: input.due_date,
+    approval_status: 'approved',
+    status: 'not_started',
+    progress: 0,
+    stages_done: 0,
+    stages_total: stages.length,
+    current_stage_ids: [],
+    current_stage_title: null,
+    is_overdue: false,
+    is_blocked: false,
+    created_by: person('u1', 'You'),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: null,
+    stages,
+  })
+  tasks.push(task)
   return structuredClone(task)
 }

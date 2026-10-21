@@ -1,11 +1,11 @@
 import { apiRequest } from './client'
 import type { Paginated } from './room'
 import {
+  mockCreateTask,
   mockGetTask,
   mockListTasks,
   mockSetStageStatus,
 } from '../mocks/tasks'
-
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
 
 export type StageStatus = 'locked' | 'todo' | 'in_progress' | 'blocked' | 'done'
@@ -106,4 +106,28 @@ export function setStageStatus(
       body: { status, blocked_reason: blockedReason },
     },
   )
+}
+
+export type CreateStageInput = {
+  title: string
+  tag_id: string | null
+  assignee_ids: string[]
+  due_date: string | null
+  parallel_with_previous: boolean
+}
+
+export type CreateTaskInput = {
+  title: string
+  description: string | null
+  start_date: string | null
+  due_date: string
+  stages: CreateStageInput[]
+}
+
+export function CreateTask(roomId: string, input: CreateTaskInput) {
+  if (USE_MOCKS) return mockCreateTask(roomId, input)
+  return apiRequest<TaskDetail>(`/rooms/${roomId}/tasks`, {
+    method: 'POST',
+    body: input,
+  })
 }
