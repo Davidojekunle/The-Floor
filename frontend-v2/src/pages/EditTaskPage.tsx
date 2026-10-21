@@ -20,7 +20,14 @@ export function EditTaskPage() {
   const query = useQuery({ queryKey: ['task', room.id, taskId], queryFn: () => getTask(room.id, taskId) })
   const back = `/rooms/${room.id}/tasks/${taskId}`
 
-  if (query.isPending) return <div className="page" />
+  if (query.isPending)
+    return (
+      <div className="page">
+        <div className="empty" role="status">
+          <p>Loading the task…</p>
+        </div>
+      </div>
+    )
   if (query.isError)
     return (
       <div className="page">

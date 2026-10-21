@@ -219,7 +219,7 @@ export function RoomHomePage() {
         </section>
 
         <div className="rail rail-bottom">
-          <ComingUp tasks={tasks} stages={mine.stages} today={today} weekEnd={weekEnd} />
+          <ComingUp tasks={tasks} stages={mine.stages} today={today} weekEnd={weekEnd} loading={all.isPending || mine.isPending} />
           <RecentActivity />
         </div>
       </div>
@@ -304,7 +304,7 @@ function NextStep({ item: { task, stage } }: { item: MyStageItem }) {
 }
 
 /** The next seven days as a short timeline: task deadlines and my stage deadlines. */
-function ComingUp(props: { tasks: TaskListItem[]; stages: MyStageItem[]; today: string; weekEnd: string }) {
+function ComingUp(props: { tasks: TaskListItem[]; stages: MyStageItem[]; today: string; weekEnd: string; loading: boolean }) {
   const { room } = useRoom()
   const tz = useTimezone()
   const inWeek = (iso: string) => {
@@ -340,7 +340,9 @@ function ComingUp(props: { tasks: TaskListItem[]; stages: MyStageItem[]; today: 
 
   return (
     <Card title="Coming up">
-      {entries.length === 0 ? (
+      {props.loading ? (
+        <p className="empty-line">Loading…</p>
+      ) : entries.length === 0 ? (
         <p className="empty-line">Nothing due in the next seven days.</p>
       ) : (
         <div className="tl">

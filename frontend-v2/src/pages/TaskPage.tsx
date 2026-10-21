@@ -80,7 +80,15 @@ export function TaskPage() {
     </div>
   )
 
-  if (query.isPending) return <div className="page">{back}</div>
+  if (query.isPending)
+    return (
+      <div className="page">
+        {back}
+        <div className="empty" role="status">
+          <p>Loading the task…</p>
+        </div>
+      </div>
+    )
   if (query.isError || !t) {
     const missing = query.error instanceof ApiError && query.error.code === 'NOT_FOUND'
     return (
