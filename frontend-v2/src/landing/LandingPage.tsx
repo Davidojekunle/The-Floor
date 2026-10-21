@@ -173,6 +173,7 @@ export function LandingPage() {
           <nav aria-label="Account">
             <Link to="/login">Sign in</Link>
             <Link to="/register">Create an account</Link>
+            <Link to="/privacy">Privacy</Link>
           </nav>
         </div>
       </footer>

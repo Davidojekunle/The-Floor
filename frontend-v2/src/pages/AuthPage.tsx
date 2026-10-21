@@ -162,6 +162,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
             {isRegister ? 'Sign in' : 'Create an account'}
           </Link>
         </p>
+        <p className="auth-foot">
+          <Link to="/privacy">How we handle your data</Link>
+        </p>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import { Shell } from './components/Shell'
 import { lastRoom } from './lib/lastRoom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { SessionPending } from './components/SessionPending'
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
 const ForgotPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ResetPasswordPage })))
@@ -44,6 +45,7 @@ export default function App() {
       <Route path="/confirm-email" element={page(<ConfirmEmailPage />)} />
       <Route path="/cancel-email-change" element={page(<CancelEmailChangePage />)} />
       <Route path="/" element={<Front />} />
+      <Route path="/privacy" element={page(<PrivacyPage />)} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/join/:code" element={page(<JoinPage />)} />

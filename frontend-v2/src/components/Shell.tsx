@@ -1,3 +1,4 @@
+import { feedbackHref } from '../lib/support'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom'
@@ -255,6 +256,8 @@ function AccountMenu({ variant }: { variant: 'side' | 'top' }) {
       items={[
         { label: 'Account settings', onSelect: () => navigate('/account') },
         ...(user.is_staff ? [{ label: 'Admin', onSelect: () => navigate('/admin') }] : []),
+        { label: 'Send feedback', onSelect: () => (window.location.href = feedbackHref()) },
+        { label: 'Privacy', onSelect: () => navigate('/privacy') },
         'divider',
         { label: 'Sign out', onSelect: () => void logout() },
         {
