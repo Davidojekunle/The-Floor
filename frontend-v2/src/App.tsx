@@ -1,66 +1,73 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { sessionHint } from './auth/sessionHint'
 import { useAuth } from './auth/useAuth'
-import { LandingPage } from './landing/LandingPage'
+const LandingPage = lazy(() => import('./landing/LandingPage').then((m) => ({ default: m.LandingPage })))
 import { Shell } from './components/Shell'
 import { lastRoom } from './lib/lastRoom'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { AuthPage } from './pages/AuthPage'
-import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordPages'
-import { CancelEmailChangePage, ConfirmEmailPage } from './pages/EmailPages'
-import { AccountPage } from './pages/AccountPage'
-import { AdminPage } from './pages/AdminPage'
-import { NotificationsPage } from './pages/NotificationsPage'
-import { CalendarPage } from './pages/CalendarPage'
-import { ChatPage } from './pages/ChatPage'
-import { EditTaskPage } from './pages/EditTaskPage'
-import { JoinPage } from './pages/JoinPage'
-import { MembersPage } from './pages/MembersPage'
-import { MyWorkPage } from './pages/MyWorkPage'
-import { NewTaskPage } from './pages/NewTaskPage'
-import { RequestsPage } from './pages/RequestsPage'
-import { RoomHomePage } from './pages/RoomHomePage'
-import { RoomsPage } from './pages/RoomsPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { TaskPage } from './pages/TaskPage'
-import { TemplateEditorPage } from './pages/TemplateEditorPage'
-import { TemplatesPage } from './pages/TemplatesPage'
+import { SessionPending } from './components/SessionPending'
+const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
+const ForgotPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ResetPasswordPage })))
+const CancelEmailChangePage = lazy(() => import('./pages/EmailPages').then((m) => ({ default: m.CancelEmailChangePage })))
+const ConfirmEmailPage = lazy(() => import('./pages/EmailPages').then((m) => ({ default: m.ConfirmEmailPage })))
+const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })))
+const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
+const CalendarPage = lazy(() => import('./pages/CalendarPage').then((m) => ({ default: m.CalendarPage })))
+const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
+const EditTaskPage = lazy(() => import('./pages/EditTaskPage').then((m) => ({ default: m.EditTaskPage })))
+const JoinPage = lazy(() => import('./pages/JoinPage').then((m) => ({ default: m.JoinPage })))
+const MembersPage = lazy(() => import('./pages/MembersPage').then((m) => ({ default: m.MembersPage })))
+const MyWorkPage = lazy(() => import('./pages/MyWorkPage').then((m) => ({ default: m.MyWorkPage })))
+const NewTaskPage = lazy(() => import('./pages/NewTaskPage').then((m) => ({ default: m.NewTaskPage })))
+const RequestsPage = lazy(() => import('./pages/RequestsPage').then((m) => ({ default: m.RequestsPage })))
+const RoomHomePage = lazy(() => import('./pages/RoomHomePage').then((m) => ({ default: m.RoomHomePage })))
+const RoomsPage = lazy(() => import('./pages/RoomsPage').then((m) => ({ default: m.RoomsPage })))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const TaskPage = lazy(() => import('./pages/TaskPage').then((m) => ({ default: m.TaskPage })))
+const TemplateEditorPage = lazy(() => import('./pages/TemplateEditorPage').then((m) => ({ default: m.TemplateEditorPage })))
+const TemplatesPage = lazy(() => import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage })))
 import { RoomProvider } from './room/RoomProvider'
+
+// Each page's code is fetched the first time it's opened, so a phone downloads only what it shows.
+const page = (el: ReactNode) => <Suspense fallback={null}>{el}</Suspense>
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<AuthPage mode="login" />} />
-      <Route path="/register" element={<AuthPage mode="register" />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/confirm-email" element={<ConfirmEmailPage />} />
-      <Route path="/cancel-email-change" element={<CancelEmailChangePage />} />
+      <Route path="/login" element={page(<AuthPage mode="login" />)} />
+      <Route path="/register" element={page(<AuthPage mode="register" />)} />
+      <Route path="/forgot-password" element={page(<ForgotPasswordPage />)} />
+      <Route path="/reset-password" element={page(<ResetPasswordPage />)} />
+      <Route path="/confirm-email" element={page(<ConfirmEmailPage />)} />
+      <Route path="/cancel-email-change" element={page(<CancelEmailChangePage />)} />
       <Route path="/" element={<Front />} />
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/join/:code" element={<JoinPage />} />
+        <Route path="/join/:code" element={page(<JoinPage />)} />
 
         <Route element={<Shell />}>
-        <Route path="/rooms" element={<RoomsPage />} />
-        <Route path="/my-work" element={<MyWorkPage />} />
-        <Route path="/account" element={<AccountPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/rooms" element={page(<RoomsPage />)} />
+        <Route path="/my-work" element={page(<MyWorkPage />)} />
+        <Route path="/account" element={page(<AccountPage />)} />
+        <Route path="/admin" element={page(<AdminPage />)} />
+        <Route path="/notifications" element={page(<NotificationsPage />)} />
 
         <Route path="/rooms/:roomId" element={<RoomProvider />}>
-          <Route index element={<RoomHomePage />} />
-          <Route path="calendar" element={<CalendarPage />} />
-          <Route path="chat" element={<ChatPage />} />
-          <Route path="tasks/new" element={<NewTaskPage />} />
-          <Route path="tasks/:taskId" element={<TaskPage />} />
-          <Route path="tasks/:taskId/edit" element={<EditTaskPage />} />
-          <Route path="templates" element={<TemplatesPage />} />
-          <Route path="templates/new" element={<TemplateEditorPage />} />
-          <Route path="templates/:templateId" element={<TemplateEditorPage />} />
-          <Route path="members" element={<MembersPage />} />
-          <Route path="requests" element={<RequestsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route index element={page(<RoomHomePage />)} />
+          <Route path="calendar" element={page(<CalendarPage />)} />
+          <Route path="chat" element={page(<ChatPage />)} />
+          <Route path="tasks/new" element={page(<NewTaskPage />)} />
+          <Route path="tasks/:taskId" element={page(<TaskPage />)} />
+          <Route path="tasks/:taskId/edit" element={page(<EditTaskPage />)} />
+          <Route path="templates" element={page(<TemplatesPage />)} />
+          <Route path="templates/new" element={page(<TemplateEditorPage />)} />
+          <Route path="templates/:templateId" element={page(<TemplateEditorPage />)} />
+          <Route path="members" element={page(<MembersPage />)} />
+          <Route path="requests" element={page(<RequestsPage />)} />
+          <Route path="settings" element={page(<SettingsPage />)} />
         </Route>
         </Route>
       </Route>
@@ -74,8 +81,8 @@ export default function App() {
 function Front() {
   const { user, loading } = useAuth()
   if (user) return <LastRoom />
-  if (loading && sessionHint.get()) return null // probably signed in: wait a moment rather than flash the landing page
-  return <LandingPage />
+  if (loading && sessionHint.get()) return <SessionPending /> // probably signed in: wait rather than flash the landing page
+  return page(<LandingPage />)
 }
 
 /** Signing in (or opening the app) takes you back to the room you were last in. */

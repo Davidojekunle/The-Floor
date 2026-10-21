@@ -42,7 +42,7 @@ export function Menu({ items, label, align = 'right', trigger, triggerClassName,
       <button
         type="button"
         className={triggerClassName ?? 'icon-btn'}
-        aria-label={trigger && !labelTrigger ? undefined : label}
+        aria-label={label}
         title={labelTrigger ? label : undefined}
         aria-haspopup="menu"
         aria-expanded={open}

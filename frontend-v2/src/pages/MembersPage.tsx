@@ -125,10 +125,10 @@ export function MembersPage() {
 
       <div className="section">
         <div className="seg" role="tablist" aria-label="Members and tags" style={{ justifySelf: 'start' }}>
-          <button type="button" role="tab" aria-selected={tab === 'people'} aria-pressed={tab === 'people'} onClick={() => setTab('people')}>
+          <button type="button" role="tab" aria-selected={tab === 'people'} onClick={() => setTab('people')}>
             People · {memberList.length || room.member_count}
           </button>
-          <button type="button" role="tab" aria-selected={tab === 'tags'} aria-pressed={tab === 'tags'} onClick={() => setTab('tags')}>
+          <button type="button" role="tab" aria-selected={tab === 'tags'} onClick={() => setTab('tags')}>
             Tags · {tagList.length}
           </button>
         </div>

@@ -1,12 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Logo } from './Logo'
+import { SessionPending } from './SessionPending'
 
 export function ProtectedRoute() {
   const { user, loading, unreachable, retry } = useAuth()
   const location = useLocation()
 
-  if (loading) return null
+  if (loading) return <SessionPending />
   if (unreachable) {
     // Offline or the API is down. The session may be fine, so don't send them to sign in.
     return (

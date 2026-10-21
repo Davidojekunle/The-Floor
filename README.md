@@ -107,6 +107,8 @@ cd frontend-v2 && npm run lint
 - **One origin.** In production, FastAPI serves the built `frontend-v2` alongside `/api`. The session cookie is `SameSite=Lax`, and the live socket needs the same host, so the site and the API must share one address.
 - **One worker.** Live updates and the email/notification loop run inside the API process. Run uvicorn with `--workers 1`; scaling out would need Redis pub/sub first.
 - **Permissions live on the server.** Each room sends the current person's permissions, and the app only shows the actions they can take. The server checks every request again.
+- **Security headers on every response:** a strict Content-Security-Policy (scripts, styles, fonts and API calls only from the site itself; result players from YouTube, Vimeo, Loom, Google, Instagram, TikTok and Canva may be framed), `X-Frame-Options: DENY`, `nosniff`, a referrer policy, and HSTS over https. Responses are gzip-compressed, fonts are bundled with the app (no Google Fonts request), and each page's code loads on first visit. The interactive API docs (`/docs`) are only on in local development.
+- **Stage changes lock the task's stages** for the length of the request, so two taps at the same moment run one after the other (one "finished" message, one notification).
 - **Notifications** are created in the same database transaction as the change that caused them. Bell items appear straight away, emails are grouped and sent by the background loop, and pushes go out after the commit on a small thread pool. The push key is generated on first start and stored in the database.
 
 ## Deploying
@@ -145,6 +147,10 @@ The main backend settings (see [`backend/.env.example`](backend/.env.example) fo
 | `TRUSTED_PROXIES` | Proxy addresses or ranges whose `X-Forwarded-For` is trusted, so rate limits see real visitors |
 | `PUSH_ENABLED`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Browser push. Optional: a key is generated and stored on first start |
 | `FRONTEND_DIST` | Path to the built frontend to serve from the API (set by the Dockerfile) |
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `deploy` or `main` and on pull requests: the backend test suite, then a lint, type-check and build of `frontend-v2`.
 
 ## Branches
 

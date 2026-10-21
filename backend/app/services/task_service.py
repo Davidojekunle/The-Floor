@@ -196,7 +196,7 @@ def update_task(db: Session, ctx: RoomContext, task_id: uuid.UUID, body: TaskUpd
     task = common.load_task(db, ctx, task_id)
     if not common.can_edit_task(ctx, task):
         raise Forbidden("You can't edit this task.")
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     sent = body.model_fields_set
 
     errors: dict[str, str] = {}

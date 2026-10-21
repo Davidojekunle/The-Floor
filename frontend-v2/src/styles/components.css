@@ -213,6 +213,10 @@
   color: var(--text-2);
   font-size: 13px;
 }
+.auth-foot a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 /* ---------- Lists ---------- */
 .list {

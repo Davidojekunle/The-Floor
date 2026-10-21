@@ -76,7 +76,7 @@ def list_task_updates(db, ctx, task_id, before, limit) -> UpdatePage:
 
 def post_update(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, body: UpdateCreate) -> UpdateOut:
     task = common.load_task(db, ctx, task_id)
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     stage = _stage(db, task, stage_id)
     if not common.is_approved(task):
         raise TaskNotApproved("Updates can be posted once this task is approved.")

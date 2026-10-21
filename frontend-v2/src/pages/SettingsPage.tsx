@@ -68,7 +68,7 @@ export function SettingsPage() {
           </p>
         </div>
         <div className="invite-field">
-          <label htmlFor="invite-url" hidden>
+          <label htmlFor="invite-url" className="sr-only">
             Invite link
           </label>
           <input className="input" id="invite-url" readOnly value={url} ref={input} onFocus={(e) => e.target.select()} />

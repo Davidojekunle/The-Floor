@@ -71,9 +71,10 @@ def test_register_is_limited_per_email(client):
 # =========================================================== refresh
 
 def test_refresh_is_limited_per_session(client):
+    # every page load and new tab renews once, so normal use (a burst of reloads) must fit; 60 a minute does
     register(client)
     login(client, "ada@example.com")
-    for _ in range(10):
+    for _ in range(60):
         assert client.post(f"{API}/auth/refresh", headers=CLIENT_HEADER).status_code == 200
     assert_429(client.post(f"{API}/auth/refresh", headers=CLIENT_HEADER))
 

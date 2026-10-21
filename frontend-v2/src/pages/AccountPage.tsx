@@ -177,7 +177,7 @@ function AppearanceSection() {
     <Section title="Appearance" sub="Follows you on every device you sign in on. System matches your device's setting.">
       <div className="seg theme-seg" role="radiogroup" aria-label="Theme">
         {THEMES.map((t) => (
-          <button key={t.value} type="button" role="radio" aria-checked={theme === t.value} aria-pressed={theme === t.value} onClick={() => pick(t.value)}>
+          <button key={t.value} type="button" role="radio" aria-checked={theme === t.value} onClick={() => pick(t.value)}>
             {t.label}
           </button>
         ))}

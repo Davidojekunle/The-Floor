@@ -198,7 +198,12 @@ html:has(.landing) {
   color: var(--text-3);
   font-weight: 500;
 }
-.demo-head h3 {
+.demo-head .demo-title {
+  /* was an h3: same look (UI face, 600), no longer in the heading outline */
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+  color: var(--text);
   font-size: 1.125rem;
   letter-spacing: -0.015em;
   margin: 2px 0 0;

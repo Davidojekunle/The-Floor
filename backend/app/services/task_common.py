@@ -96,8 +96,14 @@ def creators(db: Session, tasks: list[Task]) -> dict[uuid.UUID, UserBrief]:
     return {u.id: UserBrief(id=u.id, name=u.name) for u in db.scalars(select(User).where(User.id.in_(ids)))} if ids else {}
 
 
-def load_stages(db: Session, task_id: uuid.UUID) -> list[Stage]:
-    return list(db.scalars(select(Stage).where(Stage.task_id == task_id).order_by(Stage.position, Stage.id)))
+def load_stages(db: Session, task_id: uuid.UUID, *, lock: bool = False) -> list[Stage]:
+    """lock=True for anything that changes stages: the rows are locked (in order, so two writers can't
+    deadlock) until the transaction ends. Two "done" taps at the same moment then run one after the other,
+    and the second sees the stage already done instead of announcing it twice. SQLite ignores the lock."""
+    stmt = select(Stage).where(Stage.task_id == task_id).order_by(Stage.position, Stage.id)
+    if lock:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)  # fresh values, not the cached ones
+    return list(db.scalars(stmt))
 
 
 def touch(task: Task) -> None:

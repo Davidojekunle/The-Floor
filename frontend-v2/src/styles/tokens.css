@@ -9,7 +9,7 @@
   --border-strong: #d0d0cc;
   --text: #141414;
   --text-2: #575754;
-  --text-3: #8b8b86;
+  --text-3: #6b6b66; /* 4.6:1 or better on every light surface (WCAG AA) */
   --accent: #2448c8;
   --accent-hover: #1c3aa6;
   --accent-soft: #e8edfc;
@@ -20,7 +20,7 @@
   --on-attn: #2a1800; /* text on an --attn-dot fill, both themes */
   --danger: #c42b2b;
   --danger-soft: #fdeceb;
-  --ok: #17803d;
+  --ok: #157a3b; /* 4.8:1 on --ok-soft, so "Done" pills pass AA */
   --ok-soft: #e6f5ec;
   --overlay: rgba(18, 18, 22, 0.38);
   --shadow-pop: 0 2px 4px rgba(18, 18, 22, 0.04), 0 12px 32px rgba(18, 18, 22, 0.12);
@@ -28,8 +28,8 @@
   --av-fg-l: 30%;
 
   /* Bricolage Grotesque for h1/h2 and big numbers, Hanken Grotesk for the UI, DM Mono for figures that line up. */
-  --font-display: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
-  --font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Hanken Grotesk Variable', system-ui, sans-serif;
+  --font: 'Hanken Grotesk Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'DM Mono', ui-monospace, Consolas, monospace;
 
   --r: 8px;
@@ -47,7 +47,7 @@
     --border-strong: #3b3b3b;
     --text: #f2f2f1;
     --text-2: #a9a9a5;
-    --text-3: #777773;
+    --text-3: #8f8f8a; /* 4.8:1 or better on every dark surface */
     --accent: #8ea3ff;
     --accent-hover: #a9b9ff;
     --accent-soft: #1c2340;
@@ -75,7 +75,7 @@
   --border-strong: #3b3b3b;
   --text: #f2f2f1;
   --text-2: #a9a9a5;
-  --text-3: #777773;
+  --text-3: #8f8f8a;
   --accent: #8ea3ff;
   --accent-hover: #a9b9ff;
   --accent-soft: #1c2340;

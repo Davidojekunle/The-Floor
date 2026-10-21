@@ -11,21 +11,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#f6f6f5" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..700&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
-    />
     <meta name="theme-color" content="#f6f6f5" />
+    <meta name="description" content="The Floor splits group work into steps with one person on each. Everyone knows when it's their turn, and finished work passes itself on." />
     <title>The Floor</title>
-    <script>
-      // Apply the saved theme before the first paint (see src/lib/theme.ts).
-      try {
-        var t = localStorage.getItem('floor-theme')
-        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
-      } catch (e) {}
-    </script>
+    <!-- Applies the saved theme before the first paint (see src/lib/theme.ts). A file, not inline, so the CSP can forbid inline scripts. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

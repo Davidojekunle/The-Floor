@@ -79,7 +79,7 @@ def rotate(db: Session, raw: str | None) -> tuple[User, str]:
         raise SessionEnded("Account no longer exists.")
 
     from app.core.ratelimit import MINUTE, limiter
-    limiter.hit(f"refresh:session:{token.family_id}", 10, MINUTE)
+    limiter.hit(f"refresh:session:{token.family_id}", 60, MINUTE)  # every page load and new tab renews once
 
     if token.used_at is None:
         token.used_at = now  # the normal case: first and only use

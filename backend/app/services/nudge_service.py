@@ -47,7 +47,7 @@ def can_nudge(ctx: RoomContext, task: Task, stage: Stage, now) -> bool:
 
 def nudge(db, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, note: str | None) -> TaskDetail:
     task = common.load_task(db, ctx, task_id)
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     stage = next((s for s in stages if s.id == stage_id), None)
     if stage is None:
         from app.core.errors import NotFound
@@ -114,7 +114,7 @@ def acknowledge(db, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID) -
     from app.services import stage_service
 
     task = common.load_task(db, ctx, task_id)
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     stage = next((s for s in stages if s.id == stage_id), None)
     if stage is None:
         from app.core.errors import NotFound

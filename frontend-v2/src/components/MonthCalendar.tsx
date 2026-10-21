@@ -62,9 +62,9 @@ export function MonthCalendar({ month, onMonthChange, events, timeZone, loading,
         </div>
       </div>
 
-      <div className="cal-grid" role="grid" aria-label={monthLabel(month)}>
+      <div className="cal-grid" role="group" aria-label={monthLabel(month)}>
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-          <div className="cal-dow" key={d} role="columnheader">
+          <div className="cal-dow" key={d} aria-hidden="true">
             {d}
           </div>
         ))}
@@ -75,11 +75,13 @@ export function MonthCalendar({ month, onMonthChange, events, timeZone, loading,
             .filter(Boolean)
             .join(' ')
           return (
-            <div className={cls} key={day} role="gridcell" aria-selected={day === selected}>
+            <div className={cls} key={day}>
               <button
                 type="button"
                 className="cal-num"
                 onClick={() => setSelected(day)}
+                aria-pressed={day === selected}
+                aria-current={day === today ? 'date' : undefined}
                 aria-label={`${day}${list.length ? `, ${list.length} due` : ''}`}
               >
                 {Number(day.slice(8))}

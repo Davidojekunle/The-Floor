@@ -71,7 +71,7 @@ export function StageDemo() {
         <div className="demo-head">
           <div>
             <p className="demo-eyebrow">Studio Alpha</p>
-            <h3>Product promo video</h3>
+            <p className="demo-title">Product promo video</p>
           </div>
           <span className={`demo-pill ${complete ? 'done' : ''}`}>{complete ? 'Complete' : `${done} of 3 done`}</span>
         </div>

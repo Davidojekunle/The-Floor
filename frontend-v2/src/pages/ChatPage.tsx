@@ -371,6 +371,7 @@ function ChatView() {
             }}
             onClick={(e) => setQuery(mentionQuery(e.currentTarget.value, e.currentTarget.selectionStart ?? 0))}
             onBlur={() => setQuery(null)}
+            role="combobox"
             aria-autocomplete="list"
             aria-expanded={candidates.length > 0}
             aria-controls={candidates.length > 0 ? 'mention-list' : undefined}

@@ -1,0 +1,43 @@
+# Runs on every push and pull request: the backend test suite, and a type-check, lint and build of frontend-v2.
+name: CI
+
+on:
+  push:
+    branches: [deploy, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      # in-memory SQLite, no .env needed (tests/conftest.py sets safe defaults)
+      - run: python -m pytest -q -p no:warnings
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend-v2/package-lock.json
+      - run: npm ci
+      - run: npx oxlint src
+      - run: npm run build # tsc -b, then vite build

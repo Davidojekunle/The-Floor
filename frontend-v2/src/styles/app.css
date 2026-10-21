@@ -446,7 +446,9 @@ a.row:hover {
   color: var(--text-2);
   cursor: pointer;
 }
-.seg button[aria-pressed='true'] {
+.seg button[aria-pressed='true'],
+.seg button[aria-checked='true'],
+.seg button[aria-selected='true'] {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -1358,6 +1360,9 @@ a.row:hover {
 }
 .result-line .update-link {
   min-width: 0;
+}
+.result-line .link-btn {
+  font-size: 13px;
 }
 .btn.danger-text {
   color: var(--danger);

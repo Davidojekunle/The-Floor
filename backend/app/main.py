@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -13,6 +14,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.openapi import GLOBAL_RESPONSES, operation_id
+from app.core.security_headers import SecurityHeaders
 import app.realtime.events  # noqa: F401  (registers the commit hooks that send live events)
 
 
@@ -45,6 +47,8 @@ def create_app() -> FastAPI:
         ),
         generate_unique_id_function=operation_id,
         responses=GLOBAL_RESPONSES,
+        # in production (the built site is served) the interactive API docs are off; locally they stay on
+        **({"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.frontend_dist else {}),
     )
 
     app.add_middleware(
@@ -55,6 +59,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["Retry-After"],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=1024)  # the app's JS shrinks from ~530 KB to ~160 KB
+    app.add_middleware(SecurityHeaders)
 
     register_error_handlers(app)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
@@ -81,7 +87,7 @@ def mount_frontend(app: FastAPI, dist: Path, api_prefix: str) -> None:
     app.mount("/assets", ImmutableFiles(directory=dist / "assets"), name="assets")
     api_root = api_prefix.strip("/").split("/")[0]  # "api"
 
-    @app.get("/{path:path}", include_in_schema=False)
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def spa(path: str):
         if path == api_root or path.startswith(api_root + "/"):
             raise StarletteHTTPException(status_code=404)  # unknown API route: JSON 404, never the page

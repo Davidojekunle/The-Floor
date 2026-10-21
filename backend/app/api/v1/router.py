@@ -17,6 +17,11 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@api_router.head("/health", include_in_schema=False)  # uptime monitors often check with HEAD
+def health_head() -> dict:
+    return {"status": "ok"}
+
+
 @api_router.get("/health/db", tags=["health"])
 def health_db(db: Session = Depends(get_db)) -> dict:
     """Can the API reach PostgreSQL?"""

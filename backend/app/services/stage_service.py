@@ -54,7 +54,7 @@ def _load_for_edit(db: Session, ctx: RoomContext, task_id: uuid.UUID):
     task = common.load_task(db, ctx, task_id)
     if not common.can_edit_stages(ctx, task):
         raise Forbidden("You can't edit the stages of this task.")
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     return task, stages, notes.snapshot(db, stages)
 
 
@@ -161,7 +161,7 @@ def update_stage(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uu
 
 def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, body: StatusUpdate) -> TaskDetail:
     task = common.load_task(db, ctx, task_id)
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     before = notes.snapshot(db, stages)
     idx = _find(stages, stage_id)
     stage = stages[idx]
@@ -231,7 +231,7 @@ def _save_result(stage: Stage, url: str | None, note: str | None, actor_id) -> N
 def set_result(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid.UUID, body: ResultIn) -> TaskDetail:
     """Add, change or remove the link to a done stage's finished work. The people on it, or heads."""
     task = common.load_task(db, ctx, task_id)
-    stages = common.load_stages(db, task.id)
+    stages = common.load_stages(db, task.id, lock=True)
     stage = stages[_find(stages, stage_id)]
     if not common.is_approved(task):
         raise TaskNotApproved("Work can't start until this task is approved.")
