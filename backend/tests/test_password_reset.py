@@ -293,3 +293,41 @@ def test_smtp_backend_builds_a_proper_message(client, db, monkeypatch):
     assert sent["server"] == ("smtp.example.com", 587) and sent["tls"] and sent["login"] == ("apikey", "secret")
     assert (msg["From"], msg["To"], msg["Subject"]) == ("The Floor <no-reply@taskroom.app>", "ada@example.com", "Reset your password for The Floor")
     assert msg.get_content_type() == "multipart/alternative"
+
+
+def test_resend_backend_posts_to_the_api(client, db, monkeypatch):
+    calls = []
+
+    class Reply:
+        status_code, text = 200, '{"id": "x"}'
+
+    def fake_post(url, json, timeout, headers):
+        calls.append((url, json, headers))
+        return Reply()
+
+    s = get_settings()
+    for k, v in {"email_backend": "resend", "resend_api_key": "re_test", "email_from": "The Floor <no-reply@taskroom.app>"}.items():
+        monkeypatch.setattr(s, k, v)
+    monkeypatch.setattr(email_service.httpx, "post", fake_post)
+    register(client)
+    forgot(client)
+    assert email_service.deliver_pending(db) == 1
+    url, body, headers = calls[0]
+    assert url == "https://api.resend.com/emails" and headers["Authorization"] == "Bearer re_test"
+    assert headers["Idempotency-Key"].startswith("outbox-")
+    assert (body["from"], body["to"], body["subject"]) == ("The Floor <no-reply@taskroom.app>", ["ada@example.com"], "Reset your password for The Floor")
+    assert body["text"] and body["html"]
+
+
+def test_resend_rejection_is_retried_with_the_reason(client, db, monkeypatch):
+    class Reply:
+        status_code, text = 403, '{"message": "The taskroom.app domain is not verified."}'
+
+    s = get_settings()
+    monkeypatch.setattr(s, "email_backend", "resend")
+    monkeypatch.setattr(email_service.httpx, "post", lambda *a, **k: Reply())
+    register(client)
+    forgot(client)
+    assert email_service.deliver_pending(db) == 0
+    row = db.scalar(select(OutboxEmail))
+    assert row.attempts == 1 and "not verified" in row.last_error and row.failed_at is None

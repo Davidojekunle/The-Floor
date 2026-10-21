@@ -20,8 +20,9 @@ class Settings(BaseSettings):
     refresh_reuse_grace_seconds: float = 30
 
     # email (L2)
-    email_backend: str = "console"  # console | smtp
+    email_backend: str = "console"  # console | smtp | resend
     email_from: str = "The Floor <no-reply@localhost>"
+    resend_api_key: str = ""  # for email_backend=resend
     smtp_host: str = "localhost"
     smtp_port: int = 587
     smtp_username: str = ""

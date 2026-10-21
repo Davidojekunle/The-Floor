@@ -6,6 +6,7 @@ import smtplib
 from datetime import timedelta
 from email.message import EmailMessage
 
+import httpx
 from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -103,8 +104,27 @@ class SmtpBackend:
             smtp.send_message(msg)
 
 
+class ResendBackend:
+    """Resend's HTTP API. Goes out over HTTPS, so it works on hosts that block SMTP ports (Render's free tier)."""
+    URL = "https://api.resend.com/emails"
+
+    def send(self, email: OutboxEmail) -> None:
+        s = get_settings()
+        payload = {"from": s.email_from, "to": [email.to_address], "subject": email.subject,
+                   "text": email.text_body, "html": email.html_body}
+        if email.headers:
+            payload["headers"] = email.headers
+        r = httpx.post(self.URL, json=payload, timeout=20,
+                       headers={"Authorization": f"Bearer {s.resend_api_key}", "Idempotency-Key": f"outbox-{email.id}"})
+        if r.status_code >= 400:  # Resend says why (unverified domain, bad key...) in the body
+            raise RuntimeError(f"Resend {r.status_code}: {r.text[:300]}")
+
+
 def backend():
-    return SmtpBackend() if get_settings().email_backend == "smtp" else ConsoleBackend()
+    kind = get_settings().email_backend
+    if kind == "resend":
+        return ResendBackend()
+    return SmtpBackend() if kind == "smtp" else ConsoleBackend()
 
 
 def deliver_pending(db: Session, limit: int = 50) -> int:

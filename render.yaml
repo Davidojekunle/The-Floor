@@ -18,6 +18,7 @@ services:
       # Render's proxy forwards from private addresses, so rate limits read the real client from X-Forwarded-For.
       - key: TRUSTED_PROXIES
         value: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-      # "console" logs emails instead of sending them. For real email set EMAIL_BACKEND=smtp, EMAIL_FROM and SMTP_* in the dashboard.
+      # "console" logs emails instead of sending them. For real email set EMAIL_BACKEND=resend, RESEND_API_KEY and
+      # EMAIL_FROM (an address on your Resend-verified domain) in the dashboard. Not smtp: the free plan blocks SMTP ports.
       - key: EMAIL_BACKEND
         value: console

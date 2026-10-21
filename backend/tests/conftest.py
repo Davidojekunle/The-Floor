@@ -7,6 +7,7 @@ os.environ["BCRYPT_ROUNDS"] = "4"  # fast hashing in tests
 os.environ["REFRESH_COOKIE_SECURE"] = "false"  # the test client talks plain http
 os.environ["RATE_LIMIT_ENABLED"] = "false"  # switched on only by the rate-limit tests
 os.environ["EMAIL_SENDER_ENABLED"] = "false"  # tests deliver the outbox by hand
+os.environ["EMAIL_BACKEND"] = "console"  # never real email, whatever backend/.env says
 
 import pytest
 from fastapi.testclient import TestClient
