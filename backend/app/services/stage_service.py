@@ -218,6 +218,8 @@ def set_status(db: Session, ctx: RoomContext, task_id: uuid.UUID, stage_id: uuid
         post("stage_blocked", stage=stage, detail={"reason": stage.blocked_reason})
     elif old == StageStatus.DONE and new == StageStatus.IN_PROGRESS:
         post("stage_reopened", stage=stage)
+    elif old == StageStatus.LOCKED:  # a head started it before its turn
+        post("stage_unlocked", stage=stage)
     return _finish(db, ctx, task, stages, before)
 
 

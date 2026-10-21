@@ -10,6 +10,7 @@ export type ChatEventType =
   | 'stage_done'
   | 'stage_blocked'
   | 'stage_reopened'
+  | 'stage_unlocked'
   | 'task_completed'
   | 'temp_head_granted'
   | 'temp_head_revoked'

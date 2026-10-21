@@ -110,7 +110,7 @@ def test_message_event_is_a_discriminated_union(app):
     assert union["discriminator"]["propertyName"] == "type"
     assert set(union["discriminator"]["mapping"]) == {
         "member_joined", "task_created", "task_approved", "stage_done", "stage_blocked",
-        "stage_reopened", "task_completed", "temp_head_granted", "temp_head_revoked",
+        "stage_reopened", "stage_unlocked", "task_completed", "temp_head_granted", "temp_head_revoked",
         "member_left", "head_transferred",
     }
     assert "reason" in schemas["StageBlockedDetail"]["properties"]

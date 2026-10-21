@@ -88,6 +88,13 @@ def test_stage_reopened(client):
     assert last(client, team) == ("stage_reopened", "Ada", None, "Ada reopened Script on Product promo video")
 
 
+def test_stage_unlocked_early(client):
+    team = make_team(client)
+    task = create_task(client, team, stages=[{"title": "Script"}, {"title": "Edit"}])
+    put_status(client, team, task, task["stages"][1], "todo", team.head)
+    assert last(client, team) == ("stage_unlocked", "Ada", None, "Ada unlocked Edit early on Product promo video")
+
+
 def test_temp_head_granted_extended_and_revoked(client):
     team = make_team(client)
     mid = membership_id_for(client, team.room["id"], team.head, team.ids["tola"])

@@ -61,6 +61,12 @@ class StageReopenedEvent(_Event):
     detail: None = None
 
 
+class StageUnlockedEvent(_Event):
+    """A head or temp head let a stage start before the ones before it are done."""
+    type: Literal["stage_unlocked"]
+    detail: None = None
+
+
 class TaskCompletedEvent(_Event):
     type: Literal["task_completed"]
     detail: None = None
@@ -90,7 +96,7 @@ MessageEvent = Annotated[
     Union[
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
-        StageReopenedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
+        StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
     ],
     Field(discriminator="type"),
 ]
@@ -100,7 +106,7 @@ EVENT_MODELS = {
     for m in (
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
-        StageReopenedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
+        StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
     )
 }
 

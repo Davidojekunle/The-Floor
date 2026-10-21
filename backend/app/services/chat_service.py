@@ -48,6 +48,7 @@ def _render(event: str, actor: str, subject: str, task: str, stage: str, detail:
         "task_completed": f"{task} is complete",
         "stage_blocked": f"{actor} blocked {stage} on {task}: {detail.get('reason', '')}",
         "stage_reopened": f"{actor} reopened {stage} on {task}",
+        "stage_unlocked": f"{actor} unlocked {stage} early on {task}",
         "temp_head_granted": f"{actor} made {subject} temporary head until {until}",
         "temp_head_revoked": f"{actor} ended {subject}'s temporary head role",
         "member_left": f"{actor} left the room",
