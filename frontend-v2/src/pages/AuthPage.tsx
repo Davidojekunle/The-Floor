@@ -18,6 +18,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/' // '/' opens the last room
   const notice = (location.state as { notice?: string } | null)?.notice // e.g. after a password reset
+  const fromInvite = from.startsWith('/join/') // an invite link sent them here
   const isRegister = mode === 'register'
 
   const [name, setName] = useState('')
@@ -85,7 +86,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
           <div>
             <h1>{isRegister ? 'Create your account' : 'Sign in'}</h1>
             <p className="muted" style={{ marginTop: 4 }}>
-              {isRegister ? 'Start a room or join one with an invite link.' : 'Welcome back.'}
+              {fromInvite
+                ? `${isRegister ? 'Create an account' : 'Sign in'} to see the room you were invited to.`
+                : isRegister
+                  ? 'Start a room or join one with an invite link.'
+                  : 'Welcome back.'}
             </p>
           </div>
 

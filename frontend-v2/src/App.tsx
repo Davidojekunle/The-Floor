@@ -7,6 +7,7 @@ import { Shell } from './components/Shell'
 import { lastRoom } from './lib/lastRoom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { SessionPending } from './components/SessionPending'
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
 const ForgotPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ForgotPasswordPage })))
@@ -70,11 +71,12 @@ export default function App() {
           <Route path="members" element={page(<MembersPage />)} />
           <Route path="requests" element={page(<RequestsPage />)} />
           <Route path="settings" element={page(<SettingsPage />)} />
+          <Route path="*" element={page(<NotFoundPage />)} />
         </Route>
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={page(<NotFoundPage />)} />
     </Routes>
   )
 }
