@@ -12,6 +12,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ defa
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
 const ForgotPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('./pages/PasswordPages').then((m) => ({ default: m.ResetPasswordPage })))
+const VerifyEmailPage = lazy(() => import('./pages/EmailPages').then((m) => ({ default: m.VerifyEmailPage })))
 const CancelEmailChangePage = lazy(() => import('./pages/EmailPages').then((m) => ({ default: m.CancelEmailChangePage })))
 const ConfirmEmailPage = lazy(() => import('./pages/EmailPages').then((m) => ({ default: m.ConfirmEmailPage })))
 const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })))
@@ -45,6 +46,7 @@ export default function App() {
       <Route path="/reset-password" element={page(<ResetPasswordPage />)} />
       <Route path="/confirm-email" element={page(<ConfirmEmailPage />)} />
       <Route path="/cancel-email-change" element={page(<CancelEmailChangePage />)} />
+      <Route path="/verify-email" element={page(<VerifyEmailPage />)} />
       <Route path="/" element={<Front />} />
       <Route path="/privacy" element={page(<PrivacyPage />)} />
 

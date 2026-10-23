@@ -23,4 +23,6 @@ class User(Base):
     # access tokens issued before this moment (whole seconds) are rejected: sign-out takes effect at once
     sessions_valid_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # sees the /admin health and usage page (totals only). Set with `python -m scripts.staff`, never through the API.
+    # set when they click the link we emailed (or prove the inbox another way: a password reset, an email change)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_staff: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

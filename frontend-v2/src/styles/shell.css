@@ -929,3 +929,31 @@ html {
     height: 40px;
   }
 }
+
+/* "Confirm your email" (components/VerifyBanner.tsx): a slim bar above the page until the address is confirmed */
+.verify-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 16px;
+  background: var(--attn-soft);
+  color: var(--text);
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.verify-bar > svg.i {
+  flex: none;
+  color: var(--attn);
+}
+.verify-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.verify-bar .link-btn {
+  flex: none;
+  white-space: nowrap;
+}
+.verify-close {
+  flex: none;
+}

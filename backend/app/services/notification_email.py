@@ -216,7 +216,11 @@ def send_digests(db: Session, now: datetime | None = None) -> int:
     now = now or utcnow()
     hour = get_settings().digest_hour
     sent = 0
+    from app.services.account_service import gets_notification_emails
+
     for user in db.scalars(select(User)):
+        if not gets_notification_emails(user):
+            continue
         local = now.astimezone(_zone(user.timezone))
         if local.hour < hour:
             continue

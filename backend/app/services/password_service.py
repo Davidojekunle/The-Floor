@@ -75,6 +75,7 @@ def reset(db: Session, raw: str, new_password: str) -> None:
     new_hash = hash_password(new_password)
     token.used_at = now
     user.password_hash = new_hash
+    user.email_verified_at = user.email_verified_at or now  # the reset link reached their inbox
     session_service.sign_out_everywhere(db, user)  # including whoever had the old password
     text, html_body = email_service.render(
         "Your password was changed",

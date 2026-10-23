@@ -1,7 +1,7 @@
 """L3: the account page. Profile and theme, change password, change email."""
 import hashlib
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Request
 from sqlalchemy import select, update
@@ -10,7 +10,10 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import Conflict, EmailTokenInvalid, InvalidCredentials, ValidationFailed
 from app.core.ratelimit import HOUR, limiter
-from app.core.security import create_access_token, hash_password, verify_password
+import jwt
+
+from app.core.config import get_settings
+from app.core.security import ALGORITHM, create_access_token, hash_password, verify_password
 from app.models.email import EmailChangeToken
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
@@ -18,6 +21,7 @@ from app.realtime import events as live
 from app.services import email_service, session_service
 from app.services.auth_service import normalize_email
 from app.utils.time import as_utc, utcnow
+
 
 EMAIL_CHANGE_HOURS = 24
 PER_USER_PER_HOUR = 5
@@ -82,6 +86,77 @@ def change_password(db: Session, user: User, current: str, new: str, refresh_raw
     db.commit()
     # issued after the cutoff (same second is fine: the check is inclusive), so this tab carries on
     return create_access_token(user.id)
+
+
+# ================================================================== confirming the address
+
+VERIFY_DAYS = 7
+# Accounts made before confirmation existed keep their notification emails while they're asked to confirm.
+VERIFICATION_SINCE = datetime(2026, 10, 24, tzinfo=timezone.utc)
+
+
+def is_verified(user: User) -> bool:
+    return user.email_verified_at is not None
+
+
+def gets_notification_emails(user: User) -> bool:
+    """New accounts get notification emails only once the address is confirmed: no mail to someone else's inbox."""
+    return is_verified(user) or as_utc(user.created_at) < VERIFICATION_SINCE
+
+
+def _verify_token(user: User) -> str:
+    """Signed, not stored: it names the account and the address, so changing the email makes old links useless."""
+    now = utcnow()
+    payload = {"sub": str(user.id), "email": user.email, "purpose": "verify_email", "iat": now,
+               "exp": now + timedelta(days=VERIFY_DAYS)}
+    return jwt.encode(payload, get_settings().secret_key, algorithm=ALGORITHM)
+
+
+def send_verification(db: Session, user: User, base: str) -> None:
+    """Queue the "confirm your email" message. The caller commits."""
+    link = f"{base}/verify-email?token={_verify_token(user)}"
+    text, html_body = email_service.render(
+        "Confirm your email",
+        [f"Hi {user.name},", "Confirm this is your address so The Floor can send you notifications, and so room "
+         "invites sent to it let you straight in."],
+        button=("Confirm my email", link),
+        footer=f"The link works for {VERIFY_DAYS} days. If you didn't sign up for The Floor, ignore this email.",
+    )
+    email_service.queue(db, to=user.email, subject="Confirm your email for The Floor", text=text,
+                        html_body=html_body, category="security", user_id=user.id)
+
+
+def resend_verification(db: Session, user: User, request: Request | None) -> None:
+    limiter.hit(f"resend-verify:{user.id}", 3, HOUR)
+    if is_verified(user):
+        return
+    send_verification(db, user, email_service.link_base(request))
+    db.commit()
+
+
+def verify_email(db: Session, raw: str) -> None:
+    """From the emailed link. No sign-in needed: holding the link is the proof."""
+    try:
+        claims = jwt.decode(raw, get_settings().secret_key, algorithms=[ALGORITHM],
+                            options={"require": ["exp", "sub", "email", "purpose"]})
+    except jwt.PyJWTError:
+        raise EmailTokenInvalid(_BAD_LINK)
+    user = db.get(User, _uuid(claims["sub"])) if claims.get("purpose") == "verify_email" else None
+    if user is None or user.email != claims["email"]:  # the address changed since: that link proves nothing now
+        raise EmailTokenInvalid(_BAD_LINK)
+    if user.email_verified_at is None:
+        user.email_verified_at = utcnow()
+        live.account_changed(db, user.id)
+        db.commit()
+
+
+def _uuid(value: str):
+    import uuid
+
+    try:
+        return uuid.UUID(value)
+    except ValueError:
+        raise EmailTokenInvalid(_BAD_LINK)
 
 
 # ================================================================== email
@@ -180,6 +255,7 @@ def confirm_email(db: Session, raw: str, current: str) -> None:
 
     old = user.email
     user.email = row.new_email
+    user.email_verified_at = utcnow()  # they opened the link at the new address
     row.used_at = utcnow()
     text, html_body = email_service.render(
         "Your email was changed",

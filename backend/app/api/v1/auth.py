@@ -26,9 +26,10 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenResponse,
     UserOut,
+    VerifyEmailRequest,
 )
 from app.schemas.errors import ErrorResponse
-from app.services import account_service, auth_service, password_service, session_service
+from app.services import account_service, auth_service, email_service, password_service, session_service
 from app.services.auth_service import normalize_email
 
 router = APIRouter()
@@ -60,9 +61,12 @@ def _clear_cookie(response: Response) -> None:
 def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     limiter.hit(f"register:ip:{client_ip(request)}", 50, HOUR)  # loose: a whole class may share one IP
     limiter.hit(f"register:email:{normalize_email(body.email)}", 3, HOUR)
-    return auth_service.register_user(
+    user = auth_service.register_user(
         db, name=body.name, email=body.email, password=body.password, timezone=body.timezone
     )
+    account_service.send_verification(db, user, email_service.link_base(request))
+    db.commit()
+    return user
 
 
 @router.post("/login", response_model=TokenResponse, responses=LOGIN_RESPONSES, dependencies=[Depends(require_client_header)])
@@ -184,6 +188,21 @@ def confirm_email(body: ConfirmEmailRequest, db: Session = Depends(get_db)):
     """No login needed (works on any device), but the account's password is. Sessions stay signed in."""
     account_service.confirm_email(db, body.token, body.current_password)
     return Response(status_code=204)
+
+
+@router.post("/verify-email", status_code=204, dependencies=CLIENT, responses=BAD_EMAIL_LINK)
+def verify_email(body: VerifyEmailRequest, db: Session = Depends(get_db)):
+    """The link from the "Confirm your email" message. Works signed in or not."""
+    account_service.verify_email(db, body.token)
+    return Response(status_code=204)
+
+
+@router.post("/verify-email/resend", status_code=202, response_model=AcceptedResponse, dependencies=CLIENT,
+             responses=SESSION_RESPONSES)
+def resend_verification(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Send the confirmation email again (3 an hour). Already confirmed: nothing is sent."""
+    account_service.resend_verification(db, user, request)
+    return AcceptedResponse(message=f"We've sent a new link to {user.email}.")
 
 
 @router.post("/cancel-email-change", status_code=204, dependencies=CLIENT,

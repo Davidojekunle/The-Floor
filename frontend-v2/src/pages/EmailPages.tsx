@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { cancelEmailChangeByLink, confirmEmail } from '../api/auth'
+import { cancelEmailChangeByLink, confirmEmail, verifyEmail } from '../api/auth'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import { Logo } from '../components/Logo'
@@ -207,6 +207,61 @@ export function CancelEmailChangePage() {
           <button className="btn danger block" type="button" disabled={busy} onClick={() => void cancel()}>
             {busy ? 'Cancelling…' : 'Cancel the change'}
           </button>
+        )}
+      </div>
+    </Frame>
+  )
+}
+
+/** The link from "Confirm your email": confirms on arrival, since opening it is the whole action. */
+export function VerifyEmailPage() {
+  const token = useLinkToken()
+  const { user, refreshUser } = useAuth()
+  const [state, setState] = useState<'working' | 'done' | 'dead' | 'error'>(token ? 'working' : 'dead')
+
+  useEffect(() => {
+    if (!token) return
+    let alive = true
+    verifyEmail(token)
+      .then(() => {
+        if (!alive) return
+        setState('done')
+        if (user) void refreshUser()
+      })
+      .catch((err) => alive && setState(err instanceof ApiError && err.code === 'EMAIL_TOKEN_INVALID' ? 'dead' : 'error'))
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per link
+  }, [token])
+
+  return (
+    <Frame>
+      <div className="auth-card" role="status">
+        <div>
+          <h1>
+            {state === 'done'
+              ? 'Email confirmed'
+              : state === 'working'
+                ? 'Confirming your email…'
+                : state === 'dead'
+                  ? "This link doesn't work any more"
+                  : "Couldn't confirm your email"}
+          </h1>
+          <p className="muted" style={{ marginTop: 6 }}>
+            {state === 'done'
+              ? "Thanks. You'll get notifications by email, and room invites sent to this address let you straight in."
+              : state === 'working'
+                ? 'One moment.'
+                : state === 'dead'
+                  ? 'Confirmation links expire after 7 days, and stop working if the account changes its email. Sign in and use "Send again" for a new one.'
+                  : 'Check your connection and open the link again.'}
+          </p>
+        </div>
+        {state === 'done' && (
+          <Link className="btn primary block" to={user ? '/' : '/login'}>
+            {user ? 'Go to The Floor' : 'Sign in'}
+          </Link>
         )}
       </div>
     </Frame>

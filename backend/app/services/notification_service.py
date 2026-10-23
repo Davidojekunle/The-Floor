@@ -105,6 +105,11 @@ def _email_due(db: Session, user_id, category: str, now):
     s = settings_for(db, user_id)
     if not (s.email_enabled and getattr(s, category)):
         return None
+    from app.services.account_service import gets_notification_emails
+
+    user = db.get(User, user_id)
+    if user is None or not gets_notification_emails(user):
+        return None  # a new account that hasn't confirmed its address yet
     cache = db.info.setdefault(_DUE, {})
     if (user_id, category) in cache:
         return cache[(user_id, category)]

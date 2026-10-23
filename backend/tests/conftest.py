@@ -25,6 +25,26 @@ from app.main import create_app
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "sqlite://")
 
 
+@pytest.fixture(autouse=True)
+def accounts_predate_email_confirmation(monkeypatch):
+    """Test accounts keep notification emails without confirming, as accounts made before the feature do.
+    test_email_verification.py moves the cutoff to test new accounts."""
+    from datetime import datetime, timezone
+
+    from app.services import account_service
+
+    monkeypatch.setattr(account_service, "VERIFICATION_SINCE", datetime(9999, 1, 1, tzinfo=timezone.utc))
+
+
+@pytest.fixture(autouse=True)
+def no_confirmation_emails(monkeypatch):
+    """Sign-ups don't queue "Confirm your email" in tests, so each outbox holds only what that test sends.
+    test_email_verification.py turns it back on."""
+    from app.services import account_service
+
+    monkeypatch.setattr(account_service, "send_verification", lambda *a, **k: None)
+
+
 @pytest.fixture
 def engine():
     kwargs = {}
@@ -229,3 +249,14 @@ def send(client, team, headers, body="Hello", **refs):
 def unread(client, headers, room_name="Studio Alpha"):
     rooms = client.get("/api/v1/me", headers=headers).json()["rooms"]
     return next(r["unread_messages"] for r in rooms if r["name"] == room_name)
+
+
+def verify(db, email):
+    """Mark an account's email confirmed, as clicking the emailed link would."""
+    from sqlalchemy import update
+
+    from app.models.user import User
+    from app.utils.time import utcnow
+
+    db.execute(update(User).where(User.email == email).values(email_verified_at=utcnow()))
+    db.commit()

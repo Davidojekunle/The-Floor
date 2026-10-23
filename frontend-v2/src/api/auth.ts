@@ -26,6 +26,7 @@ export type Me = {
   unread_notifications: number // the bell's badge
   rooms: RoomSummary[]
   is_staff: boolean // can open /admin (health and usage totals)
+  email_verified: boolean // clicked the link we emailed; until then a banner asks them to
 }
 
 export type MeUpdate = { name?: string; timezone?: string; theme?: Theme }
@@ -105,5 +106,11 @@ export const confirmEmail = (token: string, currentPassword: string) =>
   apiRequest<void>('/auth/confirm-email', { method: 'POST', body: { token, current_password: currentPassword }, auth: false, session: true })
 
 /** From the "this wasn't me" link sent to the old address. 204. */
+/** The link from "Confirm your email". Works signed in or not. */
+export const verifyEmail = (token: string) =>
+  apiRequest<void>('/auth/verify-email', { method: 'POST', body: { token }, auth: false, session: true })
+
+export const resendVerification = () => apiRequest<{ message: string }>('/auth/verify-email/resend', { method: 'POST', session: true })
+
 export const cancelEmailChangeByLink = (token: string) =>
   apiRequest<void>('/auth/cancel-email-change', { method: 'POST', body: { token }, auth: false, session: true })

@@ -80,6 +80,7 @@ class MeResponse(UserOut):
     unread_notifications: int = 0
     rooms: list[RoomSummary] = []
     is_staff: bool = Field(False, description="Can open the admin page (health and usage totals).")
+    email_verified: bool = Field(False, description="Clicked the link we emailed. Until then the app asks them to.")
 
 
 class UpdateMeRequest(BaseModel):
@@ -124,6 +125,10 @@ class ChangePasswordRequest(BaseModel):
 class ChangeEmailRequest(BaseModel):
     new_email: EmailStr
     current_password: str = Field(min_length=1)
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=1000)
 
 
 class ConfirmEmailRequest(BaseModel):

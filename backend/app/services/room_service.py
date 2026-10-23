@@ -302,7 +302,11 @@ INVITE_DAYS = 30
 
 
 def _open_invite(db: Session, room_id: uuid.UUID, user: User) -> RoomInvite | None:
+    """Only for a confirmed address: otherwise anyone could sign up as the invitee and walk in."""
     from app.services.auth_service import normalize_email
+
+    if user.email_verified_at is None:
+        return None
 
     return db.scalar(select(RoomInvite).where(
         RoomInvite.room_id == room_id, RoomInvite.email == normalize_email(user.email),
