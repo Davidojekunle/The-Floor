@@ -59,9 +59,10 @@ export function PrivacyPage() {
 
         <h2>Services we use</h2>
         <ul>
-          <li><strong>Render</strong> hosts the app (Frankfurt, Germany).</li>
-          <li><strong>Supabase</strong> hosts the database (Ireland).</li>
-          <li><strong>Resend</strong> sends our emails, such as password resets and notifications.</li>
+          <li>
+            <strong>Hosting and email providers</strong> run the app, store the database in the European Union, and send
+            our emails, such as password resets and notifications.
+          </li>
           <li>
             <strong>Your browser's push service</strong> (Google, Apple or Mozilla) delivers notifications, only if you turn
             them on.
