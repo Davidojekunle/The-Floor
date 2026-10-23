@@ -5,7 +5,7 @@
     python -m scripts.staff add you@example.com
     python -m scripts.staff remove you@example.com
 
-Uses DATABASE_URL from the environment or backend/.env, so point it at the database you mean.
+Uses backend/.env (the local database). For the live one: ENV_FILE=.env.production python -m ...
 """
 import sys
 

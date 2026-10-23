@@ -5,7 +5,7 @@ existed; new sign-ups get it automatically. Queued in the outbox, so the running
     python -m scripts.send_verification            # who would get it (sends nothing)
     python -m scripts.send_verification --send     # queue the emails
 
-Uses DATABASE_URL and FRONTEND_URL from the environment or backend/.env, so point it at the database you mean.
+Uses backend/.env (the local database). For the live one: ENV_FILE=.env.production python -m ...
 """
 import sys
 

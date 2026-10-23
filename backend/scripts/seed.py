@@ -57,10 +57,13 @@ PROPOSAL_TITLE = "Behind-the-scenes reel"
 
 
 def _user(db: Session, name: str, email: str) -> User:
-    existing = db.scalar(select(User).where(User.email == email))
-    if existing:
-        return existing
-    return auth_service.register_user(db, name=name, email=email, password=PASSWORD, timezone="Africa/Lagos")
+    user = db.scalar(select(User).where(User.email == email))
+    if user is None:
+        user = auth_service.register_user(db, name=name, email=email, password=PASSWORD, timezone="Africa/Lagos")
+    if user.email_verified_at is None:  # demo accounts count as confirmed: no banner, invites let them in
+        user.email_verified_at = utcnow()
+        db.commit()
+    return user
 
 
 def _membership(db: Session, room_id, user_id) -> Membership | None:

@@ -94,6 +94,19 @@ The dev server forwards `/api` (and the live-update socket) to the backend, so t
 
 In development, emails are printed in the backend's log instead of being sent. That's where you'll find password-reset links.
 
+**Port 8000 taken?** Run the backend on another port and tell the dev server where it is:
+
+```bash
+uvicorn app.main:app --reload --workers 1 --port 8020
+API_TARGET=http://127.0.0.1:8020 npm run dev     # PowerShell: $env:API_TARGET="http://127.0.0.1:8020"; npm run dev
+```
+
+**Keep `backend/.env` pointed at the local database.** Put the live settings in `backend/.env.production` (git ignores it) and choose them on purpose when a script must reach the live database:
+
+```bash
+ENV_FILE=.env.production python -m scripts.staff list     # PowerShell: $env:ENV_FILE=".env.production"; python -m scripts.staff list
+```
+
 ## Tests
 
 ```bash

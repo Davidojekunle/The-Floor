@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic import field_validator
@@ -5,9 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """App settings, loaded from environment variables or backend/.env."""
+    """App settings, loaded from environment variables or backend/.env (local development).
+    ENV_FILE picks another file, e.g. ENV_FILE=.env.production to run a script against the live database."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=os.environ.get("ENV_FILE", ".env"), extra="ignore")
 
     app_name: str = "The Floor API"
     api_v1_prefix: str = "/api/v1"

@@ -9,8 +9,8 @@ export default defineConfig({
     port: 5174,
     proxy: {
       // 127.0.0.1, not localhost: on Windows localhost can try IPv6 first and stall about a second per request.
-      // ws: true also forwards the live socket (/api/v1/ws).
-      '/api': { target: 'http://127.0.0.1:8000', ws: true },
+      // ws: true also forwards the live socket (/api/v1/ws). API_TARGET points elsewhere when 8000 is taken.
+      '/api': { target: process.env.API_TARGET ?? 'http://127.0.0.1:8000', ws: true },
     },
   },
 })
