@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../components/Dialog'
 import { Icon } from '../components/Icon'
 import { useToast } from '../components/toastContext'
 import { useCan, useRoom } from '../room/roomContext'
+import { EmailInvite } from '../room/EmailInvite'
 import { DeleteRoomDialog, LeaveRoomDialog, TransferHeadDialog } from '../room/RoomLifecycle'
 import { Switch } from '../components/Switch'
 import { useNotificationSettings } from '../room/useNotificationSettings'
@@ -79,11 +80,13 @@ export function SettingsPage() {
         </div>
       </section>
 
+      <EmailInvite />
+
       <section className="form-card setting">
         <div style={{ minWidth: 0, flex: '1 1 280px' }}>
           <h2>Reset the link</h2>
           <p className="muted small" style={{ marginTop: 4 }}>
-            Makes a new link. The current one stops working.
+            Makes a new link. The current one, and any invites you've emailed, stop working.
           </p>
         </div>
         <button className="btn danger-outline" type="button" onClick={() => setConfirmReset(true)}>

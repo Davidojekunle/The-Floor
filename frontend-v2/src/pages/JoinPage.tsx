@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { getJoinPreview, requestToJoin } from '../api/rooms'
+import { useAuth } from '../auth/useAuth'
 import { Icon } from '../components/Icon'
 import { Logo } from '../components/Logo'
 import { plural } from '../lib/labels'
@@ -9,6 +10,8 @@ import { plural } from '../lib/labels'
 export function JoinPage() {
   const { code = '' } = useParams()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { refreshUser } = useAuth()
 
   const preview = useQuery({
     queryKey: ['join-preview', code],
@@ -18,6 +21,11 @@ export function JoinPage() {
 
   const join = useMutation({
     mutationFn: () => requestToJoin(code),
+    onSuccess: async (m) => {
+      if (m.status !== 'active') return // asked to join: the refreshed preview says so
+      await refreshUser().catch(() => {}) // invited: straight in, so the room is in the list
+      navigate(`/rooms/${m.room_id}`, { replace: true })
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['join-preview', code] }),
   })
 
@@ -45,7 +53,7 @@ export function JoinPage() {
       </>
     )
   } else {
-    const { room_name, member_count, already_member, already_requested } = preview.data
+    const { room_name, member_count, already_member, already_requested, invited } = preview.data
     // A conflict means our view was stale; the refreshed preview shows the right state.
     const joinError =
       join.error instanceof ApiError && !['ALREADY_MEMBER', 'ALREADY_REQUESTED'].includes(join.error.code)
@@ -89,9 +97,11 @@ export function JoinPage() {
         ) : (
           <>
             <button className="btn primary block" type="button" onClick={() => join.mutate()} disabled={join.isPending}>
-              {join.isPending ? 'Sending…' : 'Ask to join'}
+              {invited ? (join.isPending ? 'Joining…' : `Join ${room_name}`) : join.isPending ? 'Sending…' : 'Ask to join'}
             </button>
-            <p className="faint small">The head approves everyone who joins.</p>
+            <p className="faint small">
+              {invited ? "You were invited by email, so you're let straight in." : 'The head approves everyone who joins.'}
+            </p>
           </>
         )}
       </>

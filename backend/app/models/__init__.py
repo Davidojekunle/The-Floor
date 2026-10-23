@@ -6,7 +6,7 @@ from app.models.notification import MutedRoom, Notification, NotificationSetting
 from app.models.progress import ProgressUpdate  # noqa: F401
 from app.models.push import PushSubscription, ServerKey  # noqa: F401
 from app.models.refresh_token import RefreshToken  # noqa: F401
-from app.models.room import Membership, Room, TempHead  # noqa: F401
+from app.models.room import Membership, Room, RoomInvite, TempHead  # noqa: F401
 from app.models.tag import MembershipTag, Tag  # noqa: F401
 from app.models.task import Stage, StageAssignee, Task  # noqa: F401
 from app.models.template import TaskTemplate, TemplateStage  # noqa: F401

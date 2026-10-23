@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from datetime import timedelta
 
 from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import IntegrityError
@@ -7,14 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import AlreadyMember, AlreadyRequested, NotFound, RequestNotPending
 from app.models.enums import ApprovalStatus, MembershipStatus, Role
-from app.models.room import Membership, Room, TempHead
+from app.models.room import Membership, Room, RoomInvite, TempHead
 from app.models.task import Stage, Task
 from app.models.user import User
 from app.permissions.rules import RoomContext, can, permissions_for_role, require, resolve_role
 from app.schemas.common import PageParams
 from app.services import chat_service
 from app.realtime import events as live
-from app.schemas.room import InviteOut, JoinPreview, JoinRequestItem, MembershipOut, RoomOut, RoomSummary, UserBrief
+from app.schemas.room import InviteEmailsOut, InviteOut, JoinPreview, JoinRequestItem, MembershipOut, RoomOut, RoomSummary, UserBrief
 from app.utils.time import as_utc, utcnow
 
 
@@ -235,18 +236,37 @@ def join_preview(db: Session, user: User, invite_code: str) -> JoinPreview:
         member_count=_member_count(db, room.id),
         already_requested=bool(m and m.status == MembershipStatus.PENDING),
         already_member=bool(m and m.status == MembershipStatus.ACTIVE),
+        invited=_open_invite(db, room.id, user) is not None,
     )
 
 
 def request_join(db: Session, user: User, invite_code: str) -> MembershipOut:
     room = _room_by_invite(db, invite_code)
     m = _existing_membership(db, room.id, user.id)
+    invite = _open_invite(db, room.id, user)
+
+    if m is not None and m.status == MembershipStatus.ACTIVE:
+        raise AlreadyMember("You're already a member of this room.")
+    if invite is not None:  # the head chose this person by email: no approval step
+        if m is None:
+            m = Membership(user_id=user.id, room_id=room.id, role=Role.MEMBER)
+            db.add(m)
+        m.role, m.created_at = Role.MEMBER, utcnow()
+        invite.accepted_at = utcnow()
+        db.flush()
+        from app.services import notification_service as notes
+        notes.join_request_handled(db, room.id, user.id)  # an earlier "asked to join" is settled too
+        _let_in(db, room.id, m, actor_id=invite.invited_by)
+        try:
+            db.commit()
+        except IntegrityError:  # two simultaneous joins
+            db.rollback()
+            raise AlreadyMember("You're already a member of this room.")
+        return _membership_out(m)
 
     if m is None:
         m = Membership(user_id=user.id, room_id=room.id, role=Role.MEMBER, status=MembershipStatus.PENDING)
         db.add(m)
-    elif m.status == MembershipStatus.ACTIVE:
-        raise AlreadyMember("You're already a member of this room.")
     elif m.status == MembershipStatus.PENDING:
         raise AlreadyRequested("You've already requested to join this room.")
     else:
@@ -265,6 +285,70 @@ def request_join(db: Session, user: User, invite_code: str) -> MembershipOut:
         db.rollback()
         raise AlreadyRequested("You've already requested to join this room.")
     return _membership_out(m)
+
+
+def _let_in(db: Session, room_id: uuid.UUID, m: Membership, *, actor_id) -> None:
+    """Make a membership active: approved by a head, or arriving on an emailed invite. The caller commits."""
+    m.status, m.joined_at = MembershipStatus.ACTIVE, utcnow()
+    joined = chat_service.post_system(db, room_id=room_id, event="member_joined", actor_id=actor_id, subject_id=m.user_id)
+    m.last_read_message_id = joined.id  # a newcomer doesn't arrive to the whole history as unread
+    live.to_user(db, "room_access_granted", room_id, m.user_id)
+    live.room_changed(db, room_id)
+
+
+# ---------------------------------------------------------------- inviting by email (head)
+
+INVITE_DAYS = 30
+
+
+def _open_invite(db: Session, room_id: uuid.UUID, user: User) -> RoomInvite | None:
+    from app.services.auth_service import normalize_email
+
+    return db.scalar(select(RoomInvite).where(
+        RoomInvite.room_id == room_id, RoomInvite.email == normalize_email(user.email),
+        RoomInvite.accepted_at.is_(None), RoomInvite.expires_at > utcnow(),
+    ))
+
+
+def invite_by_email(db: Session, ctx: RoomContext, emails: list[str], link_base: str) -> InviteEmailsOut:
+    """Email each address the room's link. Signing in with that address and opening it lets them straight in.
+    Inviting again refreshes the invite and sends a new email."""
+    require(ctx, "invite.manage")
+    from app.services import email_service
+    from app.services.auth_service import normalize_email
+
+    wanted = list(dict.fromkeys(normalize_email(e) for e in emails))  # keep order, drop repeats
+    members = set(db.scalars(
+        select(func.lower(User.email)).join(Membership, Membership.user_id == User.id)
+        .where(Membership.room_id == ctx.room.id, Membership.status == MembershipStatus.ACTIVE,
+               func.lower(User.email).in_(wanted))
+    ))
+    inviter = db.get(User, ctx.membership.user_id)
+    link = f"{link_base}/join/{ctx.room.invite_code}"
+    now, invited = utcnow(), []
+    for email in wanted:
+        if email in members:
+            continue
+        row = db.scalar(select(RoomInvite).where(RoomInvite.room_id == ctx.room.id, RoomInvite.email == email))
+        if row is None:
+            row = RoomInvite(room_id=ctx.room.id, email=email)
+            db.add(row)
+        row.invited_by, row.created_at, row.expires_at, row.accepted_at = inviter.id, now, now + timedelta(days=INVITE_DAYS), None
+        text, html_body = email_service.render(
+            f"{inviter.name} invited you to {ctx.room.name}",
+            [
+                f"{inviter.name} wants you in {ctx.room.name} on The Floor, where the group splits its work into "
+                "steps and everyone knows when it's their turn.",
+                f"Open the link and sign in, or create an account, with {email}. You'll be let straight in.",
+            ],
+            button=(f"Join {ctx.room.name}", link),
+            footer=f"This invite works for {INVITE_DAYS} days. Not expecting it? You can ignore this email.",
+        )
+        email_service.queue(db, to=email, subject=f"{inviter.name} invited you to {ctx.room.name} on The Floor",
+                            text=text, html_body=html_body, category="invite", headers={"Reply-To": inviter.email})
+        invited.append(email)
+    db.commit()
+    return InviteEmailsOut(invited=invited, already_members=[e for e in wanted if e in members])
 
 
 # ---------------------------------------------------------------- join request management (head)
@@ -310,19 +394,14 @@ def decide_join_request(db: Session, ctx: RoomContext, membership_id: uuid.UUID,
     if m.status != MembershipStatus.PENDING:
         raise RequestNotPending("This request is no longer pending.")
 
-    m.status = target
     from app.services import notification_service as notes
     notes.join_request_handled(db, ctx.room.id, m.user_id)
     if approve:
-        m.joined_at = utcnow()
-        joined = chat_service.post_system(
-            db, room_id=ctx.room.id, event="member_joined", actor_id=ctx.membership.user_id, subject_id=m.user_id
-        )
-        m.last_read_message_id = joined.id  # a newcomer doesn't arrive to the whole history as unread
-        live.to_user(db, "room_access_granted", ctx.room.id, m.user_id)
+        _let_in(db, ctx.room.id, m, actor_id=ctx.membership.user_id)
         notes.join_approved(db, ctx, m.user_id)
     else:
+        m.status = target
         live.to_user(db, "join_request_rejected", ctx.room.id, m.user_id)
-    live.room_changed(db, ctx.room.id)
+        live.room_changed(db, ctx.room.id)
     db.commit()
     return _membership_out(m)

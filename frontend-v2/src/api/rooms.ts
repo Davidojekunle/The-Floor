@@ -26,6 +26,7 @@ export type JoinPreview = {
   member_count: number
   already_requested: boolean
   already_member: boolean
+  invited: boolean // this account's email was invited: joining lets them straight in
 }
 
 export type JoinRequestItem = {
@@ -68,6 +69,13 @@ export const approveJoinRequest = (roomId: string, membershipId: string) =>
 
 export const rejectJoinRequest = (roomId: string, membershipId: string) =>
   apiRequest<MembershipResult>(`/rooms/${roomId}/join-requests/${membershipId}/reject`, { method: 'POST' })
+
+/** Email people the invite link; signing in with an invited address skips approval. */
+export const inviteByEmail = (roomId: string, emails: string[]) =>
+  apiRequest<{ invited: string[]; already_members: string[] }>(`/rooms/${roomId}/invite/email`, {
+    method: 'POST',
+    body: { emails },
+  })
 
 export const regenerateInvite = (roomId: string) =>
   apiRequest<{ invite_code: string }>(`/rooms/${roomId}/invite/regenerate`, { method: 'POST' })

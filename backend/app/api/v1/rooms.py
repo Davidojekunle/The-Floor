@@ -1,9 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_room_context
+from app.core.ratelimit import HOUR, limiter
 from app.db.session import get_db
 from app.models.user import User
 from app.permissions.rules import RoomContext
@@ -11,6 +12,8 @@ from app.schemas.common import PageParams, page_params
 from app.schemas.room import (
     DeleteRoom,
     TransferHead,
+    InviteEmailsIn,
+    InviteEmailsOut,
     InviteOut,
     JoinRequestPage,
     MembershipOut,
@@ -18,7 +21,7 @@ from app.schemas.room import (
     RoomOut,
     RoomSummaryPage,
 )
-from app.services import lifecycle_service, room_service
+from app.services import email_service, lifecycle_service, room_service
 
 router = APIRouter()
 
@@ -43,6 +46,14 @@ def list_my_rooms(
 @router.get("/{room_id}", response_model=RoomOut)
 def get_room(ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
     return room_service.room_out(db, ctx)
+
+
+@router.post("/{room_id}/invite/email", response_model=InviteEmailsOut)
+def invite_by_email(body: InviteEmailsIn, request: Request, ctx: RoomContext = Depends(get_room_context),
+                    db: Session = Depends(get_db)):
+    """Email people the invite link. Signing in with an invited address lets them in without approval."""
+    limiter.hit(f"invite-email:{ctx.room.id}", 50, HOUR)
+    return room_service.invite_by_email(db, ctx, [str(e) for e in body.emails], email_service.link_base(request))
 
 
 @router.post("/{room_id}/invite/regenerate", response_model=InviteOut)

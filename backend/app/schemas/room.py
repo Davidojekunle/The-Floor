@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.common import Page
 
@@ -51,6 +51,16 @@ class JoinPreview(BaseModel):
     member_count: int
     already_requested: bool
     already_member: bool
+    invited: bool = Field(False, description="This account's email was invited: joining lets them straight in")
+
+
+class InviteEmailsIn(BaseModel):
+    emails: list[EmailStr] = Field(min_length=1, max_length=20)
+
+
+class InviteEmailsOut(BaseModel):
+    invited: list[str] = Field(description="Emailed an invite (or a fresh one)")
+    already_members: list[str] = Field(description="Already in the room: not emailed")
 
 
 class MembershipOut(BaseModel):

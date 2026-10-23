@@ -95,6 +95,7 @@ def test_join_preview(client):
     assert r.status_code == 200
     assert r.json() == {
         "room_name": "Studio Alpha", "member_count": 1, "already_requested": False, "already_member": False,
+        "invited": False,
     }
 
 
