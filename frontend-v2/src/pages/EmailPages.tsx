@@ -4,6 +4,7 @@ import { cancelEmailChangeByLink, confirmEmail } from '../api/auth'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import { Logo } from '../components/Logo'
+import { PasswordInput } from '../components/PasswordInput'
 
 /** Read ?token= once, then take it out of the address bar and history, and don't leak this URL as a referrer. */
 function useLinkToken(): string {
@@ -120,10 +121,9 @@ export function ConfirmEmailPage() {
         )}
         <div className="field">
           <label htmlFor="confirm-pw">Password</label>
-          <input
+          <PasswordInput
             className="input"
             id="confirm-pw"
-            type="password"
             autoComplete="current-password"
             autoFocus
             value={password}

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import { Logo } from '../components/Logo'
+import { PasswordInput } from '../components/PasswordInput'
 
 type Mode = 'login' | 'register'
 
@@ -142,10 +143,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
                 </Link>
               )}
             </div>
-            <input
+            <PasswordInput
               className="input"
               id="password"
-              type="password"
               autoComplete={isRegister ? 'new-password' : 'current-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}

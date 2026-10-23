@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     email_backend: str = "console"  # console | smtp | resend
     email_from: str = "The Floor <no-reply@localhost>"
     resend_api_key: str = ""  # for email_backend=resend
+    support_email: str = "support@thefloorapp.me"  # where in-app feedback goes
     smtp_host: str = "localhost"
     smtp_port: int = 587
     smtp_username: str = ""

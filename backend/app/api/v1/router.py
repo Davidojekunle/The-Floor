@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.v1 import (
-    admin, auth, calendar, join, me, members, messages, notifications, push, rooms, stages, tags, tasks, templates, unsubscribe, ws,
+    admin, auth, calendar, feedback, join, me, members, messages, notifications, push, rooms, stages, tags, tasks, templates, unsubscribe, ws,
 )
 from app.core.openapi import AUTHED_RESPONSES
 from app.db.session import get_db
@@ -34,6 +34,7 @@ api_router.include_router(me.router, tags=["me"])
 api_router.include_router(notifications.router, tags=["notifications"])
 api_router.include_router(unsubscribe.router, tags=["notifications"])
 api_router.include_router(push.router, tags=["notifications"])
+api_router.include_router(feedback.router, tags=["feedback"])
 api_router.include_router(calendar.router, tags=["calendar"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"], responses=AUTHED_RESPONSES)

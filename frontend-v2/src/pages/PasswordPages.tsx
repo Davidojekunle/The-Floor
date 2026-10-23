@@ -4,6 +4,7 @@ import { forgotPassword, resetPassword } from '../api/auth'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import { Logo } from '../components/Logo'
+import { PasswordInput } from '../components/PasswordInput'
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
@@ -187,10 +188,9 @@ export function ResetPasswordPage() {
         )}
         <div className="field">
           <label htmlFor="new-password">New password</label>
-          <input
+          <PasswordInput
             className="input"
             id="new-password"
-            type="password"
             autoComplete="new-password"
             autoFocus
             value={password}
@@ -210,10 +210,9 @@ export function ResetPasswordPage() {
         </div>
         <div className="field">
           <label htmlFor="again">Type it again</label>
-          <input
+          <PasswordInput
             className="input"
             id="again"
-            type="password"
             autoComplete="new-password"
             value={again}
             aria-invalid={errors.again ? true : undefined}

@@ -11,6 +11,7 @@ import { Switch } from '../components/Switch'
 import { useNotificationSettings } from '../room/useNotificationSettings'
 import { useToast } from '../components/toastContext'
 import { applyTheme } from '../lib/theme'
+import { PasswordInput } from '../components/PasswordInput'
 
 const THEMES: { value: Theme; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -352,10 +353,9 @@ function EmailSection() {
           </div>
           <div className="field">
             <label htmlFor="acc-email-pw">Current password</label>
-            <input
+            <PasswordInput
               className="input"
               id="acc-email-pw"
-              type="password"
               autoComplete="current-password"
               value={password}
               aria-invalid={error.current_password ? true : undefined}
@@ -433,10 +433,9 @@ function PasswordSection() {
   const field = (id: string, label: string, value: string, set: (v: string) => void, key: keyof typeof error, auto: string, hint?: string) => (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      <input
+      <PasswordInput
         className="input"
         id={id}
-        type="password"
         autoComplete={auto}
         value={value}
         aria-invalid={error[key] ? true : undefined}

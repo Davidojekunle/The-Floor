@@ -1,4 +1,3 @@
-import { feedbackHref } from '../lib/support'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom'
@@ -12,6 +11,7 @@ import { roleLabel } from '../lib/labels'
 import { useIsPhone } from '../lib/useMedia'
 import { useTimezone } from '../lib/useTimezone'
 import { Avatar } from './Avatar'
+import { FeedbackDialog } from './FeedbackDialog'
 import { Icon, type IconName } from './Icon'
 import { usePushRouting } from '../lib/usePushRouting'
 import { Menu, type MenuItem } from './Menu'
@@ -226,46 +226,50 @@ function AccountMenu({ variant }: { variant: 'side' | 'top' }) {
   const { user, logout, logoutEverywhere } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
+  const [feedback, setFeedback] = useState(false)
   if (!user) return null
   return (
-    <Menu
-      label={`Account: ${user.name}`}
-      labelTrigger={variant === 'side'}
-      align="left"
-      triggerClassName={variant === 'side' ? 'side-me' : 'icon-btn ptop-me'}
-      trigger={
-        variant === 'side' ? (
+    <>
+      {feedback && <FeedbackDialog onClose={() => setFeedback(false)} />}
+      <Menu
+        label={`Account: ${user.name}`}
+        labelTrigger={variant === 'side'}
+        align="left"
+        triggerClassName={variant === 'side' ? 'side-me' : 'icon-btn ptop-me'}
+        trigger={
+          variant === 'side' ? (
+            <>
+              <Avatar name={user.name} size="sm" />
+              <span className="me-text">{user.name}</span>
+            </>
+          ) : (
+            <>
+              <Avatar name={user.name} size="sm" />
+              <span className="sr-only">Account</span>
+            </>
+          )
+        }
+        header={
           <>
-            <Avatar name={user.name} size="sm" />
-            <span className="me-text">{user.name}</span>
+            <strong>{user.name}</strong>
+            <br />
+            {user.email}
           </>
-        ) : (
-          <>
-            <Avatar name={user.name} size="sm" />
-            <span className="sr-only">Account</span>
-          </>
-        )
-      }
-      header={
-        <>
-          <strong>{user.name}</strong>
-          <br />
-          {user.email}
-        </>
-      }
-      items={[
-        { label: 'Account settings', onSelect: () => navigate('/account') },
-        ...(user.is_staff ? [{ label: 'Admin', onSelect: () => navigate('/admin') }] : []),
-        { label: 'Send feedback', onSelect: () => (window.location.href = feedbackHref()) },
-        { label: 'Privacy', onSelect: () => navigate('/privacy') },
-        'divider',
-        { label: 'Sign out', onSelect: () => void logout() },
-        {
-          label: 'Sign out everywhere',
-          onSelect: () => void logoutEverywhere().catch(() => toast("Couldn't sign out of your other devices. Try again.")),
-        },
-      ]}
-    />
+        }
+        items={[
+          { label: 'Account settings', onSelect: () => navigate('/account') },
+          ...(user.is_staff ? [{ label: 'Admin', onSelect: () => navigate('/admin') }] : []),
+          { label: 'Send feedback', onSelect: () => setFeedback(true) },
+          { label: 'Privacy', onSelect: () => navigate('/privacy') },
+          'divider',
+          { label: 'Sign out', onSelect: () => void logout() },
+          {
+            label: 'Sign out everywhere',
+            onSelect: () => void logoutEverywhere().catch(() => toast("Couldn't sign out of your other devices. Try again.")),
+          },
+        ]}
+      />
+    </>
   )
 }
 
