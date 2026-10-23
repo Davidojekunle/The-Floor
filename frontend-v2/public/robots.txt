@@ -6,3 +6,5 @@ Allow: /privacy
 Disallow: /api/
 Disallow: /rooms/
 Disallow: /join/
+
+Sitemap: https://thefloorapp.me/sitemap.xml

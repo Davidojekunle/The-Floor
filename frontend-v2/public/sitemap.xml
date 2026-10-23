@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The public pages only: rooms, tasks and invites are private (see robots.txt). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://thefloorapp.me/</loc></url>
+  <url><loc>https://thefloorapp.me/register</loc></url>
+  <url><loc>https://thefloorapp.me/login</loc></url>
+  <url><loc>https://thefloorapp.me/privacy</loc></url>
+</urlset>

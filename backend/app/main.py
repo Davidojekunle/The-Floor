@@ -3,10 +3,12 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from urllib.parse import urlsplit
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -88,9 +90,16 @@ def mount_frontend(app: FastAPI, dist: Path, api_prefix: str) -> None:
     api_root = api_prefix.strip("/").split("/")[0]  # "api"
 
     @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-    async def spa(path: str):
+    async def spa(path: str, request: Request):
         if path == api_root or path.startswith(api_root + "/"):
             raise StarletteHTTPException(status_code=404)  # unknown API route: JSON 404, never the page
+        home = urlsplit(get_settings().frontend_url)
+        host = request.url.hostname or ""
+        if host.endswith(".onrender.com") and home.hostname and home.hostname != host:
+            # pages on the old address move to the real domain, so search engines index one site.
+            # Only pages: the API and the live socket keep working there for tabs that are already open.
+            query = f"?{request.url.query}" if request.url.query else ""
+            return RedirectResponse(f"{home.scheme}://{home.netloc}/{path}{query}", status_code=301)
         file = (dist / path).resolve()
         if path and file.is_file() and file.is_relative_to(dist):
             # the service worker must be re-checked on every visit, or an old one lingers for a day
