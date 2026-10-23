@@ -87,8 +87,9 @@ export function Shell() {
       {!phone && <Sidebar room={room} summary={summary} mini={mini} onToggleMini={toggleMini} />}
       <div className="pane">
         {phone && <PhoneTop room={room} />}
-        <VerifyBanner />
         <main className={`pane-scroll${fill ? ' fill' : ''}`} ref={pane}>
+          {/* inside the scrolling area, which already clears the floating phone top bar */}
+          <VerifyBanner />
           <Outlet />
         </main>
         {phone && <TabBar room={room} summary={summary} />}

@@ -932,6 +932,7 @@ html {
 
 /* "Confirm your email" (components/VerifyBanner.tsx): a slim bar above the page until the address is confirmed */
 .verify-bar {
+  flex: none; /* chat lays the pane out as a column */
   display: flex;
   align-items: center;
   gap: 10px;
