@@ -38,6 +38,24 @@ function zonedIso(day: string, timeZone: string, h: number, min: number, s: numb
  */
 export const endOfDayIso = (day: string, timeZone: string) => zonedIso(day, timeZone, 23, 59, 59)
 
+/** A wall-clock time ("14:30") on a day in the zone, as UTC. Meetings are picked this way. */
+export function atTimeIso(day: string, hhmm: string, timeZone: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  return zonedIso(day, timeZone, h, m, 0)
+}
+
+/** "14:30" for an instant, in the zone. */
+export function timeOfDay(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone }).format(new Date(iso))
+}
+
+/** "Mon 2 Nov, 14:30" for an instant, in the zone. */
+export function dayAndTime(iso: string, timeZone: string): string {
+  const d = new Date(iso)
+  const day = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone }).format(d)
+  return `${day}, ${timeOfDay(iso, timeZone)}`
+}
+
 /** Midnight at the start of a day in the zone, as UTC. Used for calendar windows. */
 export const startOfDayIso = (day: string, timeZone: string) => zonedIso(day, timeZone, 0, 0, 0)
 

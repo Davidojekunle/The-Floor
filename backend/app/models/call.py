@@ -3,7 +3,7 @@ provider (LiveKit); these rows only track the call's life and who is in it."""
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -26,13 +26,16 @@ class Call(Base):
     __tablename__ = "calls"
     __table_args__ = (
         # one live call per room (room calls) and one per task: the database settles a race to start one
+        # one live INSTANT call per room (room calls) and one per task; a meeting may go live beside one
         Index("uq_calls_live_room", "room_id", unique=True,
-              postgresql_where=text("status = 'live' AND task_id IS NULL"),
-              sqlite_where=text("status = 'live' AND task_id IS NULL")),
+              postgresql_where=text("status = 'live' AND kind = 'instant' AND task_id IS NULL"),
+              sqlite_where=text("status = 'live' AND kind = 'instant' AND task_id IS NULL")),
         Index("uq_calls_live_task", "task_id", unique=True,
-              postgresql_where=text("status = 'live' AND task_id IS NOT NULL"),
-              sqlite_where=text("status = 'live' AND task_id IS NOT NULL")),
+              postgresql_where=text("status = 'live' AND kind = 'instant' AND task_id IS NOT NULL"),
+              sqlite_where=text("status = 'live' AND kind = 'instant' AND task_id IS NOT NULL")),
         Index("ix_calls_room_status", "room_id", "status"),
+        Index("ix_calls_series", "series_id"),
+        Index("ix_calls_starts_at", "starts_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
@@ -55,6 +58,8 @@ class Call(Base):
     external_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)  # C2: a pasted Meet/Zoom link
     invite_everyone: Mapped[bool] = mapped_column(Boolean, default=False)  # C2
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # C2
+    series_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)  # a repeating meeting's occurrences
+    ics_sequence: Mapped[int] = mapped_column(Integer, default=0)  # calendar apps take the highest as current
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -70,3 +75,15 @@ class CallParticipant(Base):
     session_id: Mapped[str] = mapped_column(String(100), unique=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     left_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class CallInvite(Base):
+    """Who a meeting is for: a person or a tag (tags are resolved to people whenever someone is told)."""
+
+    __tablename__ = "call_invites"
+    __table_args__ = (Index("ix_call_invites_call", "call_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    call_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("calls.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    tag_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), nullable=True)

@@ -9,6 +9,9 @@ import { calendarWindow, toEvent } from '../lib/calendar'
 import { dayKey } from '../lib/dates'
 import { useTimezone } from '../lib/useTimezone'
 import { useRoom } from '../room/roomContext'
+import { listCalls } from '../api/calls'
+import { useAuth } from '../auth/useAuth'
+import { timeOfDay } from '../lib/dates'
 
 /** Room calendar: every approved task in the room on its due day. */
 export function CalendarPage() {
@@ -25,16 +28,37 @@ export function CalendarPage() {
     placeholderData: keepPreviousData,
   })
 
-  const events = (tasks.data?.items ?? [])
-    .filter((t) => !mineOnly || t.involves_me)
-    .map((t) => toEvent(t, `/rooms/${room.id}/tasks/${t.id}`))
+  const { user } = useAuth()
+  const meetings = useQuery({
+    queryKey: ['calls', room.id, 'calendar', range.from],
+    queryFn: () => listCalls(room.id, { from: range.from, to: range.to, limit: 100 }),
+    enabled: !!user?.calls_enabled,
+    placeholderData: keepPreviousData,
+  })
+  const meetingEvents = (meetings.data?.items ?? [])
+    .filter((c) => c.kind === 'scheduled' && c.status !== 'cancelled' && c.starts_at)
+    .filter((c) => !mineOnly || c.invite?.everyone || c.invite?.users.some((u) => u.id === user?.id) || (c.invite?.tags.length ?? 0) > 0)
+    .map((c) => ({
+      id: c.id,
+      title: `${timeOfDay(c.starts_at!, tz)} ${c.title}`,
+      due: c.starts_at!,
+      href: `/rooms/${room.id}/calls/${c.id}`,
+      state: (c.missed ? 'overdue' : c.status === 'ended' ? 'done' : 'open') as 'overdue' | 'done' | 'open',
+      detail: `Meeting · ${c.duration_minutes ?? 0} min`,
+    }))
+  const events = [
+    ...meetingEvents,
+    ...(tasks.data?.items ?? [])
+      .filter((t) => !mineOnly || t.involves_me)
+      .map((t) => toEvent(t, `/rooms/${room.id}/tasks/${t.id}`)),
+  ]
 
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1>Calendar</h1>
-          <p className="sub">Tasks in {room.name}, on the day they're due.</p>
+          <p className="sub">Tasks in {room.name} on the day they're due{user?.calls_enabled ? ', and meetings' : ''}.</p>
         </div>
         <div className="cal-head-actions">
           <div className="seg" role="group" aria-label="Show">

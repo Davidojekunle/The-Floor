@@ -87,6 +87,24 @@ class CallEndedEvent(_Event):
     detail: CallEndedDetail
 
 
+class MeetingDetail(BaseModel):
+    call_id: uuid.UUID
+    title: str
+    starts_at: datetime  # the app shows it in each reader's timezone
+    repeat: str | None = None  # "every week until 30 Nov"
+    count: int | None = None  # cancelled: how many in the series
+
+
+class MeetingScheduledEvent(_Event):
+    type: Literal["meeting_scheduled"]
+    detail: MeetingDetail
+
+
+class MeetingCancelledEvent(_Event):
+    type: Literal["meeting_cancelled"]
+    detail: MeetingDetail
+
+
 class TaskCompletedEvent(_Event):
     type: Literal["task_completed"]
     detail: None = None
@@ -117,7 +135,7 @@ MessageEvent = Annotated[
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
-        CallStartedEvent, CallEndedEvent,
+        CallStartedEvent, CallEndedEvent, MeetingScheduledEvent, MeetingCancelledEvent,
     ],
     Field(discriminator="type"),
 ]
@@ -128,7 +146,7 @@ EVENT_MODELS = {
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
-        CallStartedEvent, CallEndedEvent,
+        CallStartedEvent, CallEndedEvent, MeetingScheduledEvent, MeetingCancelledEvent,
     )
 }
 

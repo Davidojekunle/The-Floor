@@ -24,13 +24,14 @@ from app.services import email_service, my_task_service
 from app.services import notification_service as notes
 from app.utils.time import as_utc, utcnow
 
-CATEGORIES = ("requests", "decisions", "assignments", "mentions", "daily_digest")
+CATEGORIES = ("requests", "decisions", "assignments", "mentions", "daily_digest", "calls")
 LABEL = {
     "requests": "requests and approvals",
     "decisions": "decisions about you",
     "assignments": "stages assigned to you",
     "mentions": "mentions in chat",
     "daily_digest": "the daily digest",
+    "calls": "calls and meetings",
 }
 _GONE = ("removed_from_room", "room_deleted")  # the room can't be opened any more
 

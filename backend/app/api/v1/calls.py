@@ -14,9 +14,10 @@ from app.core.openapi import err
 from app.core.ratelimit import MINUTE, limiter
 from app.db.session import get_db
 from app.permissions.rules import RoomContext
-from app.schemas.call import CallOut, CallPage, JoinPass, StartCall
+from app.schemas.call import CallOut, CallPage, ClashCheck, ClashOut, JoinPass, MeetingIn, MeetingUpdate, StartCall
+from app.schemas.common import UtcDateTime
 from app.schemas.common import PageParams, page_params
-from app.services import call_service, video
+from app.services import call_service, meeting_service, video
 
 
 def calls_on() -> None:
@@ -51,10 +52,13 @@ def start_call(response: Response, body: StartCall | None = None, ctx: RoomConte
 
 @router.get("", response_model=CallPage)
 def list_calls(status: Literal["scheduled", "live", "ended", "cancelled"] | None = Query(None),
-               task_id: uuid.UUID | None = Query(None), params: PageParams = Depends(page_params),
+               task_id: uuid.UUID | None = Query(None),
+               from_: UtcDateTime | None = Query(None, alias="from"), to: UtcDateTime | None = Query(None),
+               params: PageParams = Depends(page_params),
                ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    """The room's call log and meetings, newest first."""
     items, total = call_service.list_calls(db, ctx, status=status, task_id=task_id, offset=params.offset,
-                                           limit=params.limit)
+                                           limit=params.limit, start=from_, end=to)
     return CallPage(items=items, total=total, page=params.page, limit=params.limit)
 
 
@@ -77,6 +81,45 @@ def join_call(call_id: uuid.UUID, ctx: RoomContext = Depends(get_room_context), 
 def end_call(call_id: uuid.UUID, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
     """End for everyone."""
     call_service.end_call(db, ctx, call_id)
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------- meetings (C2)
+
+meetings = APIRouter(dependencies=[Depends(calls_on)])
+
+
+@meetings.post("", response_model=CallOut, status_code=201,
+               responses={403: err("Only the head or a temp head can schedule meetings."),
+                          409: err("TASK_NOT_APPROVED: the task is still a proposal.")})
+def schedule_meeting(body: MeetingIn, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    """Schedule a meeting (or a repeating series: the first one comes back). Invitees are told, with a calendar file."""
+    return call_service.call_out(db, ctx, meeting_service.schedule(db, ctx, body))
+
+
+@meetings.post("/check", response_model=ClashOut)
+def check_meeting(body: ClashCheck, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    """Who already has a meeting then. A note for the form, never a block."""
+    return ClashOut(clashes=meeting_service.clashes(db, ctx, starts_at=body.starts_at,
+                                                    duration_minutes=body.duration_minutes, invite=body.invite,
+                                                    exclude_id=body.exclude_call_id))
+
+
+@meetings.patch("/{call_id}", response_model=CallOut,
+                responses={403: err("Not yours to change."), 409: err("CALL_ENDED: it already started or finished.")})
+def update_meeting(call_id: uuid.UUID, body: MeetingUpdate, ctx: RoomContext = Depends(get_room_context),
+                   db: Session = Depends(get_db)):
+    changes = body.model_dump(exclude_unset=True)
+    if "invite" in changes:
+        changes["invite"] = body.invite
+    return call_service.call_out(db, ctx, meeting_service.update(db, ctx, call_id, changes))
+
+
+@meetings.delete("/{call_id}", status_code=204,
+                 responses={403: err("Not yours to cancel."), 409: err("CALL_ENDED: it already started or finished.")})
+def cancel_meeting(call_id: uuid.UUID, following: bool = Query(False, description="Also the later ones in its series"),
+                   ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    meeting_service.cancel(db, ctx, call_id, following=following)
     return Response(status_code=204)
 
 

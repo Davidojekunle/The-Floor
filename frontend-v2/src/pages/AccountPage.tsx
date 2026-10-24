@@ -241,8 +241,8 @@ function NotificationsSection() {
         />
         {user?.calls_enabled && (
           <Switch
-            label="Calls"
-            detail="Someone starts a call in your room or about your task. A bell item and a pop-up, never an email."
+            label="Calls and meetings"
+            detail="A call starts that you're part of (bell and pop-up), and meetings you're invited to: invitations, changes and a reminder 10 minutes before, by email with a calendar file."
             checked={settings.calls}
             onChange={(v) => update({ calls: v })}
           />

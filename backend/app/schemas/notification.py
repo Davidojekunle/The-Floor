@@ -11,7 +11,7 @@ NotificationType = Literal[
     "stage_ready", "stage_assigned",
     "mentioned", "replied",
     "nudged", "nudge_answered", "stage_due_soon", "stage_overdue",
-    "call_started",
+    "call_started", "meeting_scheduled", "meeting_updated", "meeting_cancelled", "meeting_reminder",
 ]
 
 

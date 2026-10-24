@@ -1,5 +1,6 @@
 """Outbox-based email: queue in the request's commit, send from a background loop."""
 import asyncio
+import base64
 import html
 import logging
 import smtplib
@@ -68,12 +69,13 @@ def render(title: str, paragraphs: list[str], button: tuple[str, str] | None = N
 
 
 def queue(db: Session, *, to: str, subject: str, text: str, html_body: str, category: str,
-          user_id=None, headers: dict | None = None, send_after=None) -> OutboxEmail:
-    """Adds to the caller's transaction. Nothing is sent unless that transaction commits."""
+          user_id=None, headers: dict | None = None, send_after=None, attachments: list | None = None) -> OutboxEmail:
+    """Adds to the caller's transaction. Nothing is sent unless that transaction commits.
+    attachments: [{"filename", "content_type", "content"}], text content (a calendar file)."""
     now = utcnow()
     row = OutboxEmail(
         to_address=to, subject=subject, text_body=text, html_body=html_body, category=category,
-        user_id=user_id, headers=headers, created_at=now, next_attempt_at=send_after or now,
+        user_id=user_id, headers=headers, created_at=now, next_attempt_at=send_after or now, attachments=attachments,
     )
     db.add(row)
     return row
@@ -85,6 +87,8 @@ class ConsoleBackend:
     def send(self, email: OutboxEmail) -> None:
         logger.warning("\n----- EMAIL (console backend) -----\nTo: %s\nSubject: %s\n\n%s\n-----------------------------------",
                        email.to_address, email.subject, email.text_body)
+        if email.attachments:
+            logger.warning("(attached: %s)", ", ".join(a["filename"] for a in email.attachments))
 
 
 class SmtpBackend:
@@ -96,6 +100,9 @@ class SmtpBackend:
             msg[name] = value
         msg.set_content(email.text_body)
         msg.add_alternative(email.html_body, subtype="html")
+        for a in email.attachments or []:
+            maintype, _, subtype = a["content_type"].split(";")[0].partition("/")
+            msg.add_attachment(a["content"].encode(), maintype=maintype, subtype=subtype, filename=a["filename"])
         with smtplib.SMTP(s.smtp_host, s.smtp_port, timeout=20) as smtp:
             if s.smtp_starttls:
                 smtp.starttls()
@@ -114,6 +121,10 @@ class ResendBackend:
                    "text": email.text_body, "html": email.html_body}
         if email.headers:
             payload["headers"] = email.headers
+        if email.attachments:
+            payload["attachments"] = [{"filename": a["filename"], "content_type": a["content_type"],
+                                       "content": base64.b64encode(a["content"].encode()).decode()}
+                                      for a in email.attachments]
         r = httpx.post(self.URL, json=payload, timeout=20,
                        headers={"Authorization": f"Bearer {s.resend_api_key}", "Idempotency-Key": f"outbox-{email.id}"})
         if r.status_code >= 400:  # Resend says why (unverified domain, bad key...) in the body

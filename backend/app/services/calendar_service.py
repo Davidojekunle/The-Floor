@@ -106,6 +106,32 @@ def _event(uid: str, day, summary: str, description: str, url: str, stamp: str) 
     ]
 
 
+def _meeting_event(call, url: str, stamp: str) -> list[str]:
+    return [
+        "BEGIN:VEVENT",
+        f"UID:meeting-{call.id}@the-floor",
+        f"SEQUENCE:{call.ics_sequence}",
+        f"DTSTAMP:{stamp}",
+        f"DTSTART:{as_utc(call.starts_at).strftime('%Y%m%dT%H%M%SZ')}",
+        f"DTEND:{as_utc(call.ends_at_planned).strftime('%Y%m%dT%H%M%SZ')}",
+        f"SUMMARY:{_escape(call.title)}",
+        f"DESCRIPTION:{_escape(((call.description or '') + chr(10) + chr(10) + 'Join: ' + url).strip())}",
+        f"URL:{url}",
+        "END:VEVENT",
+    ]
+
+
+def _meetings(db: Session, user: User, room_id, base: str, stamp: str) -> list[str]:
+    from app.services import meeting_service
+
+    if not get_settings().calls_enabled:
+        return []
+    out: list[str] = []
+    for call in meeting_service.for_feed(db, user, room_id):
+        out += _meeting_event(call, call.external_url or f"{base}/rooms/{call.room_id}/calls/{call.id}", stamp)
+    return out
+
+
 _STATUS = {StageStatus.TODO: "Ready for you", StageStatus.IN_PROGRESS: "In progress",
            StageStatus.BLOCKED: "Blocked", StageStatus.LOCKED: "Waiting on an earlier stage"}
 
@@ -153,6 +179,7 @@ def render(db: Session, token: str) -> str:
                              f"{summary.done} of {summary.total} stages done · {now_line}",
                              f"{base}/rooms/{room.id}/tasks/{task.id}", stamp)
 
+    events += _meetings(db, user, feed.room_id, base, stamp)
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//The Floor//Calendar//EN", "CALSCALE:GREGORIAN",
              "METHOD:PUBLISH", f"X-WR-CALNAME:{_escape(name)}", "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
              "X-PUBLISHED-TTL:PT1H", *events, "END:VCALENDAR"]

@@ -1,6 +1,6 @@
 # Import every model here so Base.metadata (used by Alembic) sees all tables.
 from app.models.calendar import CalendarFeed  # noqa: F401
-from app.models.call import Call, CallParticipant  # noqa: F401
+from app.models.call import Call, CallInvite, CallParticipant  # noqa: F401
 from app.models.email import EmailChangeToken, OutboxEmail, PasswordResetToken  # noqa: F401
 from app.models.message import Message  # noqa: F401
 from app.models.notification import MutedRoom, Notification, NotificationSettings  # noqa: F401

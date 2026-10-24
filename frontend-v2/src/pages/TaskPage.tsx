@@ -28,6 +28,7 @@ import { StageUpdates, TaskUpdatesFeed } from '../room/StageUpdates'
 import { StageResultLine, WorkSoFar } from '../room/StageResult'
 import { useRoomError } from '../room/useRoomError'
 import { CallButton } from '../room/CallButton'
+import { TaskCalls } from '../room/TaskCalls'
 
 export function TaskPage() {
   const { taskId = '' } = useParams()
@@ -178,6 +179,7 @@ export function TaskPage() {
         </ol>
       </section>
 
+      {!isProposal && <TaskCalls task={t} />}
       {!isProposal && <WorkSoFar task={t} />}
       {!isProposal && <TaskUpdatesFeed task={t} />}
 

@@ -114,6 +114,7 @@ function useNav(room?: Room, summary?: RoomSummary) {
     showRequests: can('join.manage') || can('task.approve'),
     showSettings: !!room, // everyone can leave a room from Settings
     showTemplates: can('task.create'),
+    showCalls: !!room && !!user?.calls_enabled,
   }
 }
 
@@ -321,6 +322,7 @@ function Sidebar(props: { room?: Room; summary?: RoomSummary; mini: boolean; onT
               {nav.unread > 0 && <span className="mini-dot is-msg" />}
             </>)}
             {item(`${nav.base}/calendar`, 'calendar', 'Calendar')}
+            {nav.showCalls && item(`${nav.base}/calls`, 'video', 'Calls', null, { end: true })}
             {item(`${nav.base}/members`, 'users', 'Members')}
             {nav.showRequests &&
               item(`${nav.base}/requests`, 'inbox', 'Requests', <>
@@ -396,6 +398,7 @@ function TabBar({ room, summary }: { room?: Room; summary?: RoomSummary }) {
 
   const more: MenuItem[] = room
     ? [
+        ...(nav.showCalls ? [{ label: iconLabel('video', 'Calls'), onSelect: () => navigate(`${nav.base}/calls`) }] : []),
         { label: iconLabel('users', 'Members'), onSelect: () => navigate(`${nav.base}/members`) },
         ...(nav.showRequests
           ? [{ label: iconLabel('inbox', nav.pending ? `Requests (${nav.pending})` : 'Requests'), onSelect: () => navigate(`${nav.base}/requests`) }]
@@ -406,7 +409,7 @@ function TabBar({ room, summary }: { room?: Room; summary?: RoomSummary }) {
         { label: iconLabel('grid', 'All rooms'), onSelect: () => navigate('/rooms') },
       ]
     : []
-  const moreActive = room ? /\/(members|requests|templates|settings)/.test(location.pathname) : false
+  const moreActive = room ? /\/(members|requests|templates|settings|calls$)/.test(location.pathname) : false
 
   return (
     <nav className="tabbar" aria-label="Main">

@@ -24,7 +24,7 @@ from app.permissions.rules import RoomContext, can, require
 from app.realtime import events as live
 from app.schemas.call import CallOut, JoinPass, LiveCall
 from app.schemas.room import UserBrief
-from app.services import chat_service, video
+from app.services import chat_service, meeting_service, video
 from app.utils.time import as_utc, utcnow
 
 logger = logging.getLogger("taskroom.calls")
@@ -60,11 +60,39 @@ def call_out(db: Session, ctx: RoomContext, call: Call) -> CallOut:
         ends_at_planned=as_utc(call.ends_at_planned) if call.ends_at_planned else None,
         started_at=as_utc(call.started_at) if call.started_at else None,
         ended_at=as_utc(call.ended_at) if call.ended_at else None,
-        joinable_from=as_utc(call.started_at or call.created_at),
+        joinable_from=as_utc(call.starts_at) - meeting_service.JOIN_EARLY if call.kind == CallKind.SCHEDULED
+        else as_utc(call.started_at or call.created_at),
         created_by=UserBrief(id=creator.id, name=creator.name) if creator else None,
         participants=_in_call(db, call), external_url=call.external_url,
-        can_end=call.status == CallStatus.LIVE and _can_end(ctx, call), can_edit=False,
+        can_end=call.status == CallStatus.LIVE and _can_end(ctx, call),
+        can_edit=meeting_service.can_edit(ctx, call),
+        attended=_attended(db, call), duration_minutes=_duration(call),
+        invite=meeting_service.invite_out(db, call) if call.kind == CallKind.SCHEDULED else None,
+        repeats=call.series_id is not None,
     )
+
+
+def _attended(db: Session, call: Call) -> list[UserBrief]:
+    ids = list(dict.fromkeys(db.scalars(select(CallParticipant.user_id).where(
+        CallParticipant.call_id == call.id, CallParticipant.user_id.is_not(None)).order_by(CallParticipant.joined_at))))
+    names = dict(db.execute(select(User.id, User.name).where(User.id.in_(ids))).all()) if ids else {}
+    return [UserBrief(id=i, name=names[i]) for i in ids if i in names]
+
+
+def db_has_people(call: Call) -> bool:
+    """Anyone ever joined (a call nobody joined has no length worth showing)."""
+    from sqlalchemy.orm import object_session
+
+    s = object_session(call)
+    return s is not None and s.scalar(select(CallParticipant.id).where(CallParticipant.call_id == call.id).limit(1)) is not None
+
+
+def _duration(call: Call) -> int | None:
+    if call.status == CallStatus.ENDED and call.started_at and call.ended_at and not call.missed             and db_has_people(call):
+        return max(1, round((as_utc(call.ended_at) - as_utc(call.started_at)).total_seconds() / 60))
+    if call.status == CallStatus.SCHEDULED and call.starts_at and call.ends_at_planned:
+        return int((as_utc(call.ends_at_planned) - as_utc(call.starts_at)).total_seconds() // 60)
+    return None
 
 
 def _visible(db: Session, ctx: RoomContext, call_id) -> Call:
@@ -84,19 +112,26 @@ def get_call(db: Session, ctx: RoomContext, call_id) -> CallOut:
     return call_out(db, ctx, _visible(db, ctx, call_id))
 
 
-def list_calls(db: Session, ctx: RoomContext, *, status: str | None, task_id, offset: int, limit: int):
+def list_calls(db: Session, ctx: RoomContext, *, status: str | None, task_id, offset: int, limit: int,
+               start=None, end=None):
+    """The room's call log and meetings, newest first. from/to match a call's (planned or actual) start."""
     q = select(Call).where(Call.room_id == ctx.room.id)
     if status:
         q = q.where(Call.status == status)
     if task_id:
         q = q.where(Call.task_id == task_id)
+    at = func.coalesce(Call.starts_at, Call.started_at, Call.created_at)
+    if start is not None:
+        q = q.where(at >= start)
+    if end is not None:
+        q = q.where(at < end)
     total = db.scalar(select(func.count()).select_from(q.subquery()))
     rows = db.scalars(q.order_by(Call.created_at.desc(), Call.id).offset(offset).limit(limit)).all()
     return [call_out(db, ctx, c) for c in rows], total
 
 
 def _live(db: Session, room_id, task_id) -> Call | None:
-    q = select(Call).where(Call.room_id == room_id, Call.status == CallStatus.LIVE)
+    q = select(Call).where(Call.room_id == room_id, Call.status == CallStatus.LIVE, Call.kind == CallKind.INSTANT)
     q = q.where(Call.task_id == task_id) if task_id else q.where(Call.task_id.is_(None))
     return db.scalar(q)
 
@@ -106,14 +141,17 @@ def live_calls_by_room(db: Session, room_ids) -> dict:
     if not get_settings().calls_enabled or not room_ids:
         return {}
     calls = db.scalars(select(Call).where(Call.room_id.in_(room_ids), Call.status == CallStatus.LIVE,
-                                          Call.task_id.is_(None))).all()
-    return {c.room_id: LiveCall(id=c.id, participant_count=len(_in_call_ids(db, c.id))) for c in calls}
+                                          Call.task_id.is_(None)).order_by(Call.kind)).all()  # instant first
+    out: dict = {}
+    for c in calls:
+        out.setdefault(c.room_id, LiveCall(id=c.id, participant_count=len(_in_call_ids(db, c.id))))
+    return out
 
 
 def live_call_for_task(db: Session, task_id) -> LiveCall | None:
     if not get_settings().calls_enabled:
         return None
-    c = db.scalar(select(Call).where(Call.task_id == task_id, Call.status == CallStatus.LIVE))
+    c = db.scalars(select(Call).where(Call.task_id == task_id, Call.status == CallStatus.LIVE).order_by(Call.kind)).first()
     return LiveCall(id=c.id, participant_count=len(_in_call_ids(db, c.id))) if c else None
 
 
@@ -170,8 +208,11 @@ def start_call(db: Session, ctx: RoomContext, task_id) -> tuple[CallOut, bool]:
 def join_call(db: Session, ctx: RoomContext, call_id) -> JoinPass:
     """This person's own pass into the call, carrying their name. Good until the hard stop."""
     call = _visible(db, ctx, call_id)
+    if call.status == CallStatus.SCHEDULED and call.kind == CallKind.SCHEDULED:
+        if meeting_service.open_for_joining(db, ctx, call) == "link":
+            return JoinPass(provider="link", url=call.external_url)
     if call.status != CallStatus.LIVE:
-        raise CallEnded("This call has ended.")
+        raise CallEnded("This call has ended." if call.status != CallStatus.CANCELLED else "This meeting was cancelled.")
     s = get_settings()
     me = ctx.membership.user_id
     if me not in _in_call_ids(db, call.id) and len(_in_call_ids(db, call.id)) >= s.call_max_participants:
@@ -255,7 +296,9 @@ def handle_webhook(db: Session, event: dict) -> None:
 
 
 def check_calls(db: Session) -> int:
-    """Every minute: match "who's in" to the provider, end empty and overdue calls. Returns how many ended."""
+    """Every minute: meeting reminders and missed meetings; match "who's in" to the provider; end empty and overdue
+    calls. Returns how many live calls ended."""
+    meeting_service.due_work(db)
     s, now, ended = get_settings(), utcnow(), 0
     for call in db.scalars(select(Call).where(Call.status == CallStatus.LIVE)).all():
         if call.hard_stop_at and now >= as_utc(call.hard_stop_at):
@@ -324,8 +367,7 @@ def drop_from_calls(db: Session, room_id, user_id) -> None:
 def end_for_task(db: Session, task_id) -> None:
     """The task is being deleted: its live call ends first, and past calls keep with the task link cleared.
     The caller commits."""
-    call = db.scalar(select(Call).where(Call.task_id == task_id, Call.status == CallStatus.LIVE))
-    if call is not None:
+    for call in db.scalars(select(Call).where(Call.task_id == task_id, Call.status == CallStatus.LIVE)).all():
         _finish(db, call)
     db.flush()
     db.execute(update(Call).where(Call.task_id == task_id).values(task_id=None))

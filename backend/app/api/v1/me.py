@@ -10,6 +10,7 @@ from app.core.openapi import ME_RESPONSES, MY_TASKS_RESPONSES
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import MeResponse, UpdateMeRequest
+from app.schemas.call import CallPage
 from app.schemas.common import PageParams, UtcDateTime, page_params_tasks
 from app.schemas.task import MyTaskPage
 from app.services import account_service, my_task_service, notification_service, room_service
@@ -70,3 +71,31 @@ def list_my_tasks(
         approval_status=approval_status, sort=sort,
     )
     return MyTaskPage(items=items, total=total, page=params.page, limit=params.limit)
+
+
+@router.get("/me/calls", response_model=CallPage, responses=ME_RESPONSES)
+def list_my_calls(
+    from_: Annotated[UtcDateTime | None, Query(alias="from", description="Default: now")] = None,
+    to: Annotated[UtcDateTime | None, Query(description="Default: 60 days after `from`")] = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """My calendar: meetings I'm invited to in the window, and calls live now, across my rooms."""
+    if not get_settings().calls_enabled:
+        from app.core.errors import NotFound
+
+        raise NotFound("Not found.")
+    from datetime import timedelta
+
+    from app.services import call_service, meeting_service
+    from app.utils.time import utcnow
+
+    start = from_ or utcnow()
+    end = to or start + timedelta(days=60)
+    contexts: dict = {}
+    items = []
+    for call in meeting_service.mine(db, user, start, end):
+        if call.room_id not in contexts:
+            contexts[call.room_id] = room_service.get_room_context(db, call.room_id, user)
+        items.append(call_service.call_out(db, contexts[call.room_id], call))
+    return CallPage(items=items, total=len(items), page=1, limit=max(len(items), 1))

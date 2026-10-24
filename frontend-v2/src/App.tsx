@@ -19,6 +19,7 @@ const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ defa
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
 const CalendarPage = lazy(() => import('./pages/CalendarPage').then((m) => ({ default: m.CalendarPage })))
+const CallsPage = lazy(() => import('./pages/CallsPage').then((m) => ({ default: m.CallsPage })))
 const CallPage = lazy(() => import('./pages/CallPage').then((m) => ({ default: m.CallPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const EditTaskPage = lazy(() => import('./pages/EditTaskPage').then((m) => ({ default: m.EditTaskPage })))
@@ -65,6 +66,7 @@ export default function App() {
           <Route index element={page(<RoomHomePage />)} />
           <Route path="calendar" element={page(<CalendarPage />)} />
           <Route path="chat" element={page(<ChatPage />)} />
+          <Route path="calls" element={page(<CallsPage />)} />
           <Route path="calls/:callId" element={page(<CallPage />)} />
           <Route path="tasks/new" element={page(<NewTaskPage />)} />
           <Route path="tasks/:taskId" element={page(<TaskPage />)} />

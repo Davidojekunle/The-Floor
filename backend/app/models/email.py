@@ -21,6 +21,7 @@ class OutboxEmail(Base):
     text_body: Mapped[str] = mapped_column(Text)
     html_body: Mapped[str] = mapped_column(Text)
     headers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    attachments: Mapped[list | None] = mapped_column(JSON, nullable=True)  # [{filename, content_type, content}]
     category: Mapped[str] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

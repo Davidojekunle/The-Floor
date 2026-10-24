@@ -39,6 +39,10 @@ CATEGORY = {
     "stage_assigned": "assignments",
     "mentioned": "mentions",
     "call_started": "calls",
+    "meeting_scheduled": "calls",
+    "meeting_updated": "calls",
+    "meeting_cancelled": "calls",
+    "meeting_reminder": "calls",
     "replied": "mentions",  # a reply is a way of addressing you, so it shares the Mentions switch
     "nudged": "assignments",  # a head asked for an update on your stage
     "stage_due_soon": "assignments",  # automatic reminders
@@ -48,7 +52,9 @@ CATEGORY = {
 TYPES = tuple(CATEGORY)
 SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest", "mentions", "all_messages",
             "calls")
-NO_EMAIL = {"call_started"}  # an email would arrive after the call is over: bell and push only
+NO_EMAIL = {"call_started", "meeting_scheduled", "meeting_updated", "meeting_cancelled", "meeting_reminder"}
+# call_started: an email would arrive after the call is over. Meetings email at once, with a calendar file,
+# from meeting_service (not grouped like the rest).
 _DUE = "_notification_email_due"  # per-transaction: (user, category) -> due time, for rows not yet flushed
 
 
@@ -167,7 +173,9 @@ def target_path(n: Notification) -> str:
     room = f"/rooms/{n.room_id}"
     if n.type in ("mentioned", "replied"):
         return f"{room}/chat"
-    if n.type == "call_started" and n.data and n.data.get("call_id"):
+    if n.type == "meeting_cancelled":
+        return f"{room}/calls"
+    if n.type.startswith(("call_", "meeting_")) and n.data and n.data.get("call_id"):
         return f"{room}/calls/{n.data['call_id']}"
     if n.type in ("join_requested", "proposal_submitted"):
         return f"{room}/requests"

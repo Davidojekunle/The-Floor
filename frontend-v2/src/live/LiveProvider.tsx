@@ -73,6 +73,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
           break
         case 'call_changed': // started, someone joined or left, or ended: refetch it, and the live dots
           inv(['call', r, e.call_id])
+          inv(['calls', r]) // the Calls page, the task's list and the calendar
           if (e.task_id) inv(['task', r, e.task_id])
           meSoon()
           break

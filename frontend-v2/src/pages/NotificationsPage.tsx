@@ -17,6 +17,10 @@ import { useTimezone } from '../lib/useTimezone'
 
 const ICON: Record<string, IconName> = {
   call_started: 'video',
+  meeting_scheduled: 'calendar',
+  meeting_updated: 'calendar',
+  meeting_cancelled: 'calendar',
+  meeting_reminder: 'bell',
   join_requested: 'users',
   join_approved: 'users',
   proposal_submitted: 'inbox',
@@ -42,7 +46,8 @@ function targetOf(n: Notification): string | null {
   if (!n.room || n.type === 'room_deleted' || n.type === 'removed_from_room') return null
   const room = `/rooms/${n.room.id}`
   if (n.type === 'mentioned') return `${room}/chat`
-  if (n.type === 'call_started' && n.data?.call_id) return `${room}/calls/${n.data.call_id}`
+  if (n.type === 'meeting_cancelled') return `${room}/calls`
+  if ((n.type === 'call_started' || n.type.startsWith('meeting_')) && n.data?.call_id) return `${room}/calls/${n.data.call_id}`
   if (n.type === 'join_requested' || n.type === 'proposal_submitted') return `${room}/requests`
   if (n.type === 'stages_unassigned') {
     const first = n.data?.stages?.[0]

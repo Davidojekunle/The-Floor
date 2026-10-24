@@ -20,6 +20,10 @@ export type NotificationType =
   | 'stage_due_soon'
   | 'stage_overdue'
   | 'call_started'
+  | 'meeting_scheduled'
+  | 'meeting_updated'
+  | 'meeting_cancelled'
+  | 'meeting_reminder'
 
 type Named = { id: string; name: string }
 type Titled = { id: string; title: string }

@@ -19,6 +19,7 @@ import { isLocal, useChat, type ChatItem, type LocalMessage } from '../room/useC
 import { typingLabel, useTyping } from '../room/useTyping'
 import { CallButton } from '../room/CallButton'
 import { CallCardJoin } from '../room/CallCardJoin'
+import { MeetingCardLine } from '../room/MeetingCardLine'
 
 const MAX = 4000
 const GROUP_MS = 5 * 60 * 1000 // consecutive messages from one person within 5 minutes share a header
@@ -562,6 +563,9 @@ function SystemLine({ m, at, onReply }: { m: Message; at: string; onReply: () =>
           </>
         ) : (
           body
+        )}
+        {(m.event?.type === 'meeting_scheduled' || m.event?.type === 'meeting_cancelled') && typeof m.event.detail?.starts_at === 'string' && (
+          <MeetingCardLine detail={m.event.detail as { starts_at: string; repeat?: string | null }} />
         )}
         {m.event?.type === 'call_started' && typeof m.event.detail?.call_id === 'string' && (
           <CallCardJoin callId={m.event.detail.call_id} at={m.created_at} />

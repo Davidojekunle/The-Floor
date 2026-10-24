@@ -50,8 +50,11 @@ def _render(event: str, actor: str, subject: str, task: str, stage: str, detail:
         "stage_reopened": f"{actor} reopened {stage} on {task}",
         "stage_unlocked": f"{actor} unlocked {stage} early on {task}",
         "call_started": f"{actor} started a call" + (f" about {task}" if task else ""),
+        "meeting_scheduled": f"{actor} scheduled {detail.get('title', 'a meeting')}",
+        "meeting_cancelled": f"{actor} cancelled {detail.get('title', 'a meeting')}",
         "call_ended": "Call ended · {m} min · {p} {w}".format(
-            m=detail.get("minutes", 0), p=detail.get("people", 0), w="person" if detail.get("people") == 1 else "people"),
+            m=detail.get("minutes", 0), p=detail.get("people", 0), w="person" if detail.get("people") == 1 else "people")
+        if detail.get("people") else "Call ended · nobody joined",
         "temp_head_granted": f"{actor} made {subject} temporary head until {until}",
         "temp_head_revoked": f"{actor} ended {subject}'s temporary head role",
         "member_left": f"{actor} left the room",
