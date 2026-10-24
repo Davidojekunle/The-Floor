@@ -279,6 +279,6 @@ class RejectBody(BaseModel):
     reason: str | None = Field(None, max_length=500)
 
 
-from app.schemas.call import LiveCall  # noqa: E402
+from app.schemas.room import LiveCall  # noqa: E402
 
 TaskDetail.model_rebuild()

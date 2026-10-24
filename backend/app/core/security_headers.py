@@ -12,26 +12,23 @@ FRAME_SOURCES = (
 )
 
 
-def _daily() -> str | None:
-    """Daily's call screen origin while calls are on (it's framed, and needs the camera and microphone)."""
+def _calls_on() -> bool:
     from app.core.config import get_settings
 
-    s = get_settings()
-    return f"https://{s.daily_domain}.daily.co" if s.calls_enabled else None
+    return get_settings().calls_enabled
 
 
 def permissions_policy() -> str:
-    daily = _daily()
-    av = f'(self "{daily}")' if daily else "()"
+    """Calls run in our own page (LiveKit), so it alone may use the camera, microphone and screen sharing."""
+    av = "(self)" if _calls_on() else "()"
     return f"camera={av}, microphone={av}, display-capture={av}, geolocation=(), payment=(), usb=()"
 
 
 def csp(host: str) -> str:
     # 'self' covers same-origin WebSockets in current browsers; the explicit ws/wss entries cover older Safari.
     live = f" wss://{host} ws://{host}" if host else ""
-    daily = _daily()
-    if daily:
-        live += " https://*.daily.co wss://*.daily.co"
+    if _calls_on():
+        live += " https://*.livekit.cloud wss://*.livekit.cloud"  # signalling; the media itself is WebRTC
     return "; ".join((
         "default-src 'self'",
         "script-src 'self'",
@@ -40,7 +37,7 @@ def csp(host: str) -> str:
         "media-src 'self' blob: https:",
         "font-src 'self' data:",
         f"connect-src 'self'{live}",
-        f"frame-src {FRAME_SOURCES}{' ' + daily if daily else ''}",
+        f"frame-src {FRAME_SOURCES}",
         "worker-src 'self'",
         "manifest-src 'self'",
         "object-src 'none'",

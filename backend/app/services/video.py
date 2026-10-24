@@ -1,22 +1,26 @@
-"""The one place that talks to the video provider (Daily). Switching providers later means changing this file
-and the call component, nothing else. Tests use FakeVideo (VIDEO_PROVIDER=fake), so they never start real calls.
+"""The one place that talks to the video provider (LiveKit Cloud). Switching providers later means changing this
+file and the call component, nothing else. Tests use FakeVideo (VIDEO_PROVIDER=fake), so they never start real calls.
 
-Daily's REST API: https://docs.daily.co/reference/rest-api
+LiveKit's server API: https://docs.livekit.io/reference/server/server-apis/ (Twirp: POST /twirp/livekit.RoomService/…,
+authorised by a short JWT we sign with the API secret). Join passes are JWTs too, signed here: no network call.
+The free Build plan has a hard monthly cap: past it, new calls fail instead of costing money.
 """
 import base64
 import hashlib
 import hmac
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 import httpx
+import jwt
 
 from app.core.config import get_settings
 from app.core.errors import CallProviderUnavailable
 
 logger = logging.getLogger("taskroom.calls")
-API = "https://api.daily.co/v1"
+UNAVAILABLE = "Calls are unavailable right now. Try again in a minute."
 
 
 @dataclass
@@ -28,73 +32,67 @@ class Present:
     joined_at: datetime
 
 
-def room_url(name: str) -> str:
-    return f"https://{get_settings().daily_domain}.daily.co/{name}"
+def server_url() -> str:
+    """Where browsers connect (wss://<project>.livekit.cloud)."""
+    return get_settings().livekit_url
 
 
-class DailyVideo:
-    def _call(self, method: str, path: str, json: dict | None = None) -> httpx.Response:
+def _sign(grants: dict, *, identity: str = "the-floor-server", name: str | None = None, ttl: int = 60,
+          expires_at: datetime | None = None) -> str:
+    s, now = get_settings(), int(time.time())
+    claims = {"iss": s.livekit_api_key, "sub": identity, "nbf": now - 10, "video": grants,
+              "exp": int(expires_at.timestamp()) if expires_at else now + ttl}
+    if name:
+        claims["name"] = name
+    return jwt.encode(claims, s.livekit_api_secret, algorithm="HS256")
+
+
+class LiveKitVideo:
+    def _call(self, method: str, body: dict, grants: dict) -> dict:
+        host = server_url().replace("wss://", "https://").replace("ws://", "http://").rstrip("/")
         try:
-            r = httpx.request(method, f"{API}{path}", json=json, timeout=10,
-                              headers={"Authorization": f"Bearer {get_settings().daily_api_key}"})
+            r = httpx.post(f"{host}/twirp/livekit.RoomService/{method}", json=body, timeout=10,
+                           headers={"Authorization": f"Bearer {_sign(grants)}"})
         except httpx.HTTPError as e:
-            logger.warning("Daily %s %s failed: %s", method, path, e)
-            raise CallProviderUnavailable("Calls are unavailable right now. Try again in a minute.")
-        if r.status_code >= 500 or r.status_code in (401, 403, 429):
-            logger.warning("Daily %s %s answered %s: %s", method, path, r.status_code, r.text[:300])
-            raise CallProviderUnavailable("Calls are unavailable right now. Try again in a minute.")
-        return r
+            logger.warning("LiveKit %s failed: %s", method, e)
+            raise CallProviderUnavailable(UNAVAILABLE)
+        if r.status_code == 404:
+            return {}
+        if r.status_code >= 400:
+            logger.warning("LiveKit %s answered %s: %s", method, r.status_code, r.text[:300])
+            raise CallProviderUnavailable(UNAVAILABLE)
+        return r.json() if r.content else {}
 
     def create_room(self, name: str, expires_at: datetime, max_participants: int) -> None:
-        """Private, so only someone holding one of our passes gets in. Everyone is put out at the hard stop."""
-        r = self._call("POST", "/rooms", {
-            "name": name,
-            "privacy": "private",
-            "properties": {
-                "exp": int(expires_at.timestamp()),
-                "eject_at_room_exp": True,
-                "max_participants": max_participants,
-                "enable_prejoin_ui": True,
-                "enable_screenshare": True,
-                "enable_chat": True,
-            },
-        })
-        if r.status_code >= 400:
-            logger.warning("Daily create room answered %s: %s", r.status_code, r.text[:300])
-            raise CallProviderUnavailable("Calls are unavailable right now. Try again in a minute.")
+        """Rooms are private by nature: only someone holding one of our passes gets in. The 3-hour hard stop is
+        enforced by the minute check, which deletes the room."""
+        self._call("CreateRoom", {"name": name, "max_participants": max_participants, "empty_timeout": 600,
+                                  "departure_timeout": 120}, {"roomCreate": True})
 
     def token(self, room: str, *, user_id: str, user_name: str, expires_at: datetime, owner: bool) -> str:
-        r = self._call("POST", "/meeting-tokens", {"properties": {
-            "room_name": room, "user_id": user_id, "user_name": user_name[:100],
-            "exp": int(expires_at.timestamp()), "is_owner": owner, "eject_at_token_exp": True,
-        }})
-        if r.status_code >= 400:
-            logger.warning("Daily token answered %s: %s", r.status_code, r.text[:300])
-            raise CallProviderUnavailable("Calls are unavailable right now. Try again in a minute.")
-        return r.json()["token"]
+        return _sign({"roomJoin": True, "room": room, "canPublish": True, "canSubscribe": True,
+                      "canPublishData": True, "roomAdmin": owner},
+                     identity=user_id, name=user_name[:100], expires_at=expires_at)
 
     def delete_room(self, room: str) -> None:
-        """Ends the meeting for anyone still in it. Best effort: the room expires on its own at the hard stop."""
+        """Ends the meeting for anyone still in it. Best effort: an empty room also closes itself."""
         try:
-            self._call("DELETE", f"/rooms/{room}")
+            self._call("DeleteRoom", {"room": room}, {"roomCreate": True})
         except CallProviderUnavailable:
             pass
 
     def eject(self, room: str, user_ids: list[str]) -> None:
-        if user_ids:
+        for identity in user_ids:  # a person can be in from two tabs, but they share one identity
             try:
-                self._call("POST", f"/rooms/{room}/eject", {"user_ids": user_ids[:100]})
+                self._call("RemoveParticipant", {"room": room, "identity": identity}, {"roomAdmin": True, "room": room})
             except CallProviderUnavailable:
                 pass  # their pass still runs out at the hard stop
 
     def presence(self, room: str) -> list[Present]:
-        r = self._call("GET", f"/rooms/{room}/presence")
-        if r.status_code == 404:
-            return []
+        data = self._call("ListParticipants", {"room": room}, {"roomAdmin": True, "room": room})
         return [
-            Present(session_id=p["id"], user_id=p.get("userId"),
-                    joined_at=datetime.fromisoformat(p["joinTime"].replace("Z", "+00:00")))
-            for p in r.json().get("data", [])
+            Present(session_id=p["sid"], user_id=p.get("identity"), joined_at=epoch(p.get("joined_at") or time.time()))
+            for p in data.get("participants", [])
         ]
 
 
@@ -110,7 +108,7 @@ class FakeVideo:
 
     def _check(self):
         if self.down:
-            raise CallProviderUnavailable("Calls are unavailable right now. Try again in a minute.")
+            raise CallProviderUnavailable(UNAVAILABLE)
 
     def create_room(self, name, expires_at, max_participants):
         self._check()
@@ -137,7 +135,7 @@ _fake = FakeVideo()
 
 
 def provider():
-    return _fake if get_settings().video_provider == "fake" else DailyVideo()
+    return _fake if get_settings().video_provider == "fake" else LiveKitVideo()
 
 
 def reset_fake() -> FakeVideo:
@@ -148,17 +146,20 @@ def reset_fake() -> FakeVideo:
 
 # ------------------------------------------------------------------ webhooks
 
-def signature_ok(raw_body: bytes, timestamp: str | None, signature: str | None) -> bool:
-    """Daily signs `timestamp + "." + body` with HMAC-SHA256, keyed by the base64-decoded secret, base64 out."""
-    secret = get_settings().daily_webhook_secret
-    if not (secret and timestamp and signature):
+def signature_ok(raw_body: bytes, authorization: str | None) -> bool:
+    """LiveKit sends a JWT signed with our API secret whose `sha256` claim is the base64 SHA-256 of the body."""
+    s = get_settings()
+    if not (s.livekit_api_secret and authorization):
         return False
+    token = authorization.removeprefix("Bearer ").strip()
     try:
-        key = base64.b64decode(secret)
-    except ValueError:
+        claims = jwt.decode(token, s.livekit_api_secret, algorithms=["HS256"], options={"verify_aud": False})
+    except jwt.PyJWTError:
         return False
-    expected = base64.b64encode(hmac.new(key, timestamp.encode() + b"." + raw_body, hashlib.sha256).digest()).decode()
-    return hmac.compare_digest(expected, signature)
+    if claims.get("iss") != s.livekit_api_key:
+        return False
+    digest = base64.b64encode(hashlib.sha256(raw_body).digest()).decode()
+    return hmac.compare_digest(digest, str(claims.get("sha256", "")))
 
 
 def epoch(seconds) -> datetime:

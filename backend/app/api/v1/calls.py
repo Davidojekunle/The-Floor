@@ -25,8 +25,8 @@ def calls_on() -> None:
 
 
 router = APIRouter(dependencies=[Depends(calls_on)])
-# Not switched off with the rest: Daily checks the address answers before it saves the webhook, which we set up
-# before launch. Its messages are signed, and only ever touch calls that are live.
+# Not switched off with the rest, so the webhook can be set up before launch. Its messages are signed, and only
+# ever touch calls that are live.
 webhooks = APIRouter()
 
 BUSY = {503: err("CALL_PROVIDER_UNAVAILABLE: the video provider is down. Nothing was saved; retrying is safe.")}
@@ -80,18 +80,16 @@ def end_call(call_id: uuid.UUID, ctx: RoomContext = Depends(get_room_context), d
     return Response(status_code=204)
 
 
-@webhooks.post("/webhooks/daily", include_in_schema=False)
-async def daily_webhook(request: Request, db: Session = Depends(get_db)):
-    """Daily reports joins and leaves. Signed with our shared secret, so nobody can fake them."""
+@webhooks.post("/webhooks/livekit", include_in_schema=False)
+async def livekit_webhook(request: Request, db: Session = Depends(get_db)):
+    """LiveKit reports joins and leaves. Signed with our API secret, so nobody can fake them."""
     raw = await request.body()
+    if not video.signature_ok(raw, request.headers.get("authorization")):
+        raise Unauthenticated("Bad signature.")
     try:
         event = json.loads(raw or b"{}")
     except ValueError:
         event = {}
-    if event == {"test": "test"}:
-        return {"ok": True}  # Daily checks the address answers before it saves the webhook
-    if not video.signature_ok(raw, request.headers.get("x-webhook-timestamp"), request.headers.get("x-webhook-signature")):
-        raise Unauthenticated("Bad signature.")
     from starlette.concurrency import run_in_threadpool
 
     await run_in_threadpool(call_service.handle_webhook, db, event)

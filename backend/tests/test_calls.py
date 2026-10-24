@@ -1,7 +1,6 @@
 """Calls, C1 (contract v4). The video provider is faked (services/video.FakeVideo): no real calls start."""
 import base64
 import hashlib
-import hmac
 import json
 import uuid
 from datetime import timedelta
@@ -17,13 +16,14 @@ from app.utils.time import utcnow
 from tests.conftest import auth_headers, create_task, join_and_approve, make_team, membership_id_for, post_task
 
 API = "/api/v1"
-SECRET = base64.b64encode(b"a shared webhook secret for tests").decode()
+KEY, SECRET = "APItestkey", "a-test-api-secret-that-is-long-enough-for-hs256"
 
 
 @pytest.fixture
 def fake(monkeypatch):
     s = get_settings()
-    for k, v in {"calls_enabled": True, "video_provider": "fake", "daily_webhook_secret": SECRET}.items():
+    for k, v in {"calls_enabled": True, "video_provider": "fake", "livekit_url": "wss://thefloor-test.livekit.cloud",
+                 "livekit_api_key": KEY, "livekit_api_secret": SECRET}.items():
         monkeypatch.setattr(s, k, v)
     return video.reset_fake()
 
@@ -45,16 +45,18 @@ def last_message(client, team, headers):
 
 
 def signed(body: dict, secret=SECRET):
+    import jwt
+
     raw = json.dumps(body).encode()
-    ts = "1700000000"
-    sig = base64.b64encode(hmac.new(base64.b64decode(secret), ts.encode() + b"." + raw, hashlib.sha256).digest()).decode()
-    return raw, {"X-Webhook-Timestamp": ts, "X-Webhook-Signature": sig, "Content-Type": "application/json"}
+    digest = base64.b64encode(hashlib.sha256(raw).digest()).decode()
+    token = jwt.encode({"iss": KEY, "sha256": digest}, secret, algorithm="HS256")
+    return raw, {"Authorization": token, "Content-Type": "application/webhook+json"}
 
 
 def webhook(client, kind, room, user_id, session, joined_at=1700000000):
-    raw, headers = signed({"type": kind, "payload": {"room": room, "user_id": str(user_id), "session_id": session,
-                                                     "joined_at": joined_at}})
-    return client.post(f"{API}/webhooks/daily", content=raw, headers=headers)
+    raw, headers = signed({"event": kind, "room": {"name": room},
+                           "participant": {"sid": session, "identity": str(user_id), "joined_at": str(joined_at)}})
+    return client.post(f"{API}/webhooks/livekit", content=raw, headers=headers)
 
 
 def provider_room(db, call_id):
@@ -144,8 +146,8 @@ def test_joining_hands_each_person_their_own_pass(client, fake):
     p = client.post(calls_url(team, call["id"], "join"), headers=team.tola)
     assert p.status_code == 200, p.text
     j = p.json()
-    assert j["provider"] == "daily" and j["room_url"].startswith("https://thefloor.daily.co/floor-")
-    assert j["token"] == f"fake-token:{j['room_url'].rsplit('/', 1)[1]}:{team.ids['tola']}:0"  # not an owner
+    assert j["provider"] == "livekit" and j["server_url"] == "wss://thefloor-test.livekit.cloud"
+    assert j["token"].startswith("fake-token:floor-") and j["token"].endswith(f":{team.ids['tola']}:0")  # not an owner
     head_pass = client.post(calls_url(team, call["id"], "join"), headers=team.head).json()
     assert head_pass["token"].endswith(":1")  # the head can manage the call
 
@@ -154,7 +156,7 @@ def test_a_full_call(client, db, fake, monkeypatch):
     team = make_team(client)
     monkeypatch.setattr(get_settings(), "call_max_participants", 1)
     call = start(client, team, team.femi).json()
-    webhook(client, "participant.joined", provider_room(db, call["id"]), team.ids["femi"], "s-femi")
+    webhook(client, "participant_joined", provider_room(db, call["id"]), team.ids["femi"], "s-femi")
     r = client.post(calls_url(team, call["id"], "join"), headers=team.tola)
     assert r.status_code == 409 and r.json()["error"]["code"] == "CALL_FULL"
     assert client.post(calls_url(team, call["id"], "join"), headers=team.femi).status_code == 200  # rejoining is fine
@@ -179,8 +181,8 @@ def test_call_ended_card_counts_minutes_and_people(client, db, fake):
     team = make_team(client)
     call = start(client, team, team.head).json()
     room = provider_room(db, call["id"])
-    webhook(client, "participant.joined", room, team.ids["head"], "s1")
-    webhook(client, "participant.joined", room, team.ids["tola"], "s2")
+    webhook(client, "participant_joined", room, team.ids["head"], "s1")
+    webhook(client, "participant_joined", room, team.ids["tola"], "s2")
     db.execute(update(Call).where(Call.id == uuid.UUID(call["id"])).values(started_at=utcnow() - timedelta(minutes=24)))
     db.commit()
     client.post(calls_url(team, call["id"], "end"), headers=team.head)
@@ -195,25 +197,27 @@ def test_webhook_tracks_who_is_in(client, db, fake):
     team = make_team(client)
     call = start(client, team, team.head).json()
     room = provider_room(db, call["id"])
-    assert webhook(client, "participant.joined", room, team.ids["tola"], "s-tola").status_code == 200
-    webhook(client, "participant.joined", room, team.ids["tola"], "s-tola")  # delivered twice: counted once
-    webhook(client, "participant.joined", room, team.ids["tola"], "s-tola-phone")  # a second device: still one person
+    assert webhook(client, "participant_joined", room, team.ids["tola"], "s-tola").status_code == 200
+    webhook(client, "participant_joined", room, team.ids["tola"], "s-tola")  # delivered twice: counted once
+    webhook(client, "participant_joined", room, team.ids["tola"], "s-tola-phone")  # a second device: still one person
     got = client.get(calls_url(team, call["id"]), headers=team.head).json()
     assert got["participants"] == [{"id": team.ids["tola"], "name": "Tola"}]
     assert client.get(f"{API}/me", headers=team.head).json()["rooms"][0]["live_call"]["participant_count"] == 1
-    webhook(client, "participant.left", room, team.ids["tola"], "s-tola")
-    webhook(client, "participant.left", room, team.ids["tola"], "s-tola-phone")
+    webhook(client, "participant_left", room, team.ids["tola"], "s-tola")
+    webhook(client, "participant_left", room, team.ids["tola"], "s-tola-phone")
     assert client.get(calls_url(team, call["id"]), headers=team.head).json()["participants"] == []
 
 
 def test_webhook_signatures(client, db, fake):
     team = make_team(client)
     call = start(client, team, team.head).json()
-    raw, headers = signed({"type": "participant.joined",
-                           "payload": {"room": provider_room(db, call["id"]), "session_id": "x"}},
-                          secret=base64.b64encode(b"someone else's secret").decode())
-    assert client.post(f"{API}/webhooks/daily", content=raw, headers=headers).status_code == 401
-    assert client.post(f"{API}/webhooks/daily", json={"test": "test"}).status_code == 200  # Daily's address check
+    raw, headers = signed({"event": "participant_joined", "room": {"name": provider_room(db, call["id"])},
+                           "participant": {"sid": "x", "identity": str(team.ids["head"])}},
+                          secret="someone-else's-secret-that-is-long-enough-for-hs256")
+    assert client.post(f"{API}/webhooks/livekit", content=raw, headers=headers).status_code == 401
+    raw, headers = signed({"event": "participant_joined"})
+    assert client.post(f"{API}/webhooks/livekit", content=raw + b" ", headers=headers).status_code == 401  # body changed
+    assert client.post(f"{API}/webhooks/livekit", json={"event": "participant_joined"}).status_code == 401  # unsigned
 
 
 # ================================================================ the minute check
@@ -248,7 +252,7 @@ def test_check_ends_a_call_at_the_hard_stop(client, db, fake):
 def test_provider_down_during_the_check_keeps_the_call(client, db, fake):
     team = make_team(client)
     call = start(client, team, team.head).json()
-    webhook(client, "participant.joined", provider_room(db, call["id"]), team.ids["head"], "s1")
+    webhook(client, "participant_joined", provider_room(db, call["id"]), team.ids["head"], "s1")
     fake.down = True
     assert call_service.check_calls(db) == 0
     assert client.get(calls_url(team, call["id"]), headers=team.head).json()["participants"] != []
@@ -260,7 +264,7 @@ def test_someone_removed_from_the_room_is_dropped_from_its_call(client, db, fake
     team = make_team(client)
     call = start(client, team, team.head).json()
     room = provider_room(db, call["id"])
-    webhook(client, "participant.joined", room, team.ids["tola"], "s-tola")
+    webhook(client, "participant_joined", room, team.ids["tola"], "s-tola")
     mid = membership_id_for(client, team.room["id"], team.head, team.ids["tola"])
     assert client.delete(f"{API}/rooms/{team.room['id']}/members/{mid}", headers=team.head).status_code == 204
     assert (room, [team.ids["tola"]]) in fake.ejected
@@ -279,8 +283,8 @@ def test_deleting_the_task_ends_its_call(client, db, fake):
 
 def test_security_headers_allow_the_call_screen_only_while_calls_are_on(client, fake, monkeypatch):
     on = client.get(f"{API}/health")
-    assert 'camera=(self "https://thefloor.daily.co")' in on.headers["permissions-policy"]
-    assert "https://thefloor.daily.co" in on.headers["content-security-policy"]
+    assert "camera=(self)" in on.headers["permissions-policy"]
+    assert "wss://*.livekit.cloud" in on.headers["content-security-policy"]
     monkeypatch.setattr(get_settings(), "calls_enabled", False)
     off = client.get(f"{API}/health")
-    assert "camera=()" in off.headers["permissions-policy"] and "daily" not in off.headers["content-security-policy"]
+    assert "camera=()" in off.headers["permissions-policy"] and "livekit" not in off.headers["content-security-policy"]

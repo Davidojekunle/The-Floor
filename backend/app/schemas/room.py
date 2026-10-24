@@ -9,6 +9,13 @@ from app.schemas.common import Page
 RoleName = Literal["head", "temp_head", "member"]
 
 
+class LiveCall(BaseModel):
+    """On /me rooms and task detail: a call is live here."""
+
+    id: uuid.UUID
+    participant_count: int
+
+
 class RoomSummary(BaseModel):
     """One entry in the room switcher (GET /me and GET /rooms)."""
 
@@ -99,8 +106,3 @@ class TransferHead(BaseModel):
 
 class DeleteRoom(BaseModel):
     confirm_name: str = Field(min_length=1, max_length=100)
-
-
-from app.schemas.call import LiveCall  # noqa: E402  (call.py imports UserBrief from here)
-
-RoomSummary.model_rebuild()

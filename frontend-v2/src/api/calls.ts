@@ -21,7 +21,7 @@ export type Call = {
 }
 
 /** This person's own pass into the call. */
-export type JoinPass = { provider: 'daily'; room_url: string; token: string; expires_at: string }
+export type JoinPass = { provider: 'livekit'; server_url: string; token: string; expires_at: string }
 
 /** Start a call in the room (or about a task). If one is already live there, that one comes back. */
 export const startCall = (roomId: string, taskId?: string) =>

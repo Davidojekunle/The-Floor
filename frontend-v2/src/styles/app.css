@@ -1567,9 +1567,22 @@ a.row:hover {
 .call-frame[hidden] {
   display: none;
 }
-.call-frame iframe {
+.call-frame > .lk-room-container {
   position: absolute;
   inset: 0;
+}
+.call-ready {
+  margin: auto;
+  width: min(420px, 100% - 32px);
+  display: grid;
+  gap: 14px;
+  text-align: center;
+  padding: 24px 0;
+}
+.call-ready-switches {
+  display: grid;
+  gap: 4px;
+  text-align: left;
 }
 .call-note {
   margin: auto;

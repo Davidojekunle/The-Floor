@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.common import Page
-from app.schemas.room import UserBrief
+from app.schemas.room import LiveCall, UserBrief  # noqa: F401  (LiveCall lives with the room switcher)
 
 
 class TaskRef(BaseModel):
@@ -45,14 +45,7 @@ class CallPage(Page[CallOut]):
 class JoinPass(BaseModel):
     """This person's own pass into the call. The call is private: the room link alone lets nobody in."""
 
-    provider: Literal["daily"]
-    room_url: str
+    provider: Literal["livekit"]
+    server_url: str = Field(description="Where the browser connects (wss://…)")
     token: str
     expires_at: datetime
-
-
-class LiveCall(BaseModel):
-    """On /me rooms and task detail: a call is live here."""
-
-    id: uuid.UUID
-    participant_count: int

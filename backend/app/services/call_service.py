@@ -180,7 +180,7 @@ def join_call(db: Session, ctx: RoomContext, call_id) -> JoinPass:
     expires = as_utc(call.hard_stop_at)
     token = video.provider().token(call.provider_room, user_id=str(me), user_name=user.name, expires_at=expires,
                                    owner=_can_end(ctx, call))
-    return JoinPass(provider="daily", room_url=video.room_url(call.provider_room), token=token, expires_at=expires)
+    return JoinPass(provider="livekit", server_url=video.server_url(), token=token, expires_at=expires)
 
 
 def end_call(db: Session, ctx: RoomContext, call_id) -> None:
@@ -238,15 +238,16 @@ def _user_uuid(value):
 
 
 def handle_webhook(db: Session, event: dict) -> None:
-    kind, payload = event.get("type"), event.get("payload") or {}
-    call = db.scalar(select(Call).where(Call.provider_room == payload.get("room"), Call.status == CallStatus.LIVE))
+    """LiveKit's events: participant_joined, participant_left (and room_finished, which the check covers)."""
+    kind, room, who = event.get("event"), (event.get("room") or {}).get("name"), event.get("participant") or {}
+    call = db.scalar(select(Call).where(Call.provider_room == room, Call.status == CallStatus.LIVE))
     if call is None:
         return  # a call we've already ended, or not ours
-    session = payload.get("session_id")
-    if kind == "participant.joined" and session:
-        at = payload.get("joined_at")
-        _joined(db, call, _user_uuid(payload.get("user_id")), session, video.epoch(at) if at else utcnow())
-    elif kind == "participant.left" and session:
+    session = who.get("sid")
+    if kind == "participant_joined" and session:
+        at = who.get("joined_at")
+        _joined(db, call, _user_uuid(who.get("identity")), session, video.epoch(at) if at else utcnow())
+    elif kind == "participant_left" and session:
         p = db.scalar(select(CallParticipant).where(CallParticipant.session_id == session))
         if p is not None:
             _left(db, call, p, utcnow())

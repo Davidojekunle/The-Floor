@@ -8,6 +8,7 @@ venv/
 # Node
 node_modules/
 dist/
+dist-calls/
 
 # Env and OS
 .env

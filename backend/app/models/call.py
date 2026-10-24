@@ -1,5 +1,5 @@
 """Calls (contract v4). C1: instant calls in a room or about a task. Video goes between browsers and the
-provider (Daily); these rows only track the call's life and who is in it."""
+provider (LiveKit); these rows only track the call's life and who is in it."""
 import uuid
 from datetime import datetime
 
