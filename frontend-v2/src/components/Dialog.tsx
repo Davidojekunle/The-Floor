@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useIsPhone } from '../lib/useMedia'
 import { Sheet } from './Sheet'
 
@@ -37,14 +38,16 @@ function CentredDialog({ title, children, actions, onClose }: Props) {
     }
   }, [onClose])
 
-  return (
+  // At the top of the page, like the phone sheet: opened from the dark sidebar, it would take on its colours.
+  return createPortal(
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={box}>
         <h2 id={titleId}>{title}</h2>
         {children}
         <div className="actions">{actions}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
