@@ -29,7 +29,8 @@ export type Me = {
   rooms: RoomSummary[]
   is_staff: boolean // can open /admin (health and usage totals)
   email_verified: boolean // clicked the link we emailed; until then a banner asks them to
-  calls_enabled: boolean // calls are switched on for this site; off: no call controls anywhere
+  calls_enabled: boolean // calls are on for me (everyone, or staff while testing); off: no call controls anywhere
+  announcement: string | null // staff's site-wide message, shown as a banner
 }
 
 export type MeUpdate = { name?: string; timezone?: string; theme?: Theme }

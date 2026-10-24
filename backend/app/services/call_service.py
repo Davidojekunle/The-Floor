@@ -138,7 +138,9 @@ def _live(db: Session, room_id, task_id) -> Call | None:
 
 def live_calls_by_room(db: Session, room_ids) -> dict:
     """For the room switcher's "live" dot: each room's live room call (not task calls) and how many are in."""
-    if not get_settings().calls_enabled or not room_ids:
+    from app.services import site_service
+
+    if not site_service.calls_anywhere(db) or not room_ids:
         return {}
     calls = db.scalars(select(Call).where(Call.room_id.in_(room_ids), Call.status == CallStatus.LIVE,
                                           Call.task_id.is_(None)).order_by(Call.kind)).all()  # instant first
@@ -149,7 +151,9 @@ def live_calls_by_room(db: Session, room_ids) -> dict:
 
 
 def live_call_for_task(db: Session, task_id) -> LiveCall | None:
-    if not get_settings().calls_enabled:
+    from app.services import site_service
+
+    if not site_service.calls_anywhere(db):
         return None
     c = db.scalars(select(Call).where(Call.task_id == task_id, Call.status == CallStatus.LIVE).order_by(Call.kind)).first()
     return LiveCall(id=c.id, participant_count=len(_in_call_ids(db, c.id))) if c else None
@@ -196,8 +200,11 @@ def start_call(db: Session, ctx: RoomContext, task_id) -> tuple[CallOut, bool]:
             raise
         return call_out(db, ctx, existing), False
 
-    chat_service.post_system(db, room_id=ctx.room.id, event="call_started", actor_id=starter.id, task=task,
-                             detail={"call_id": str(call.id)})
+    from app.services import site_service
+
+    if site_service.calls_public(db):
+        chat_service.post_system(db, room_id=ctx.room.id, event="call_started", actor_id=starter.id, task=task,
+                                 detail={"call_id": str(call.id)})
     from app.services import notification_service as notes
     notes.call_started(db, ctx, call, task)
     live.call_changed(db, call)
@@ -246,8 +253,11 @@ def _finish(db: Session, call: Call) -> None:
         video.provider().delete_room(call.provider_room)
     minutes = max(1, round((now - as_utc(call.started_at or call.created_at)).total_seconds() / 60)) if people else 0
     task = db.get(Task, call.task_id) if call.task_id else None
-    chat_service.post_system(db, room_id=call.room_id, event="call_ended", task=task,
-                             detail={"call_id": str(call.id), "minutes": minutes, "people": len(people)})
+    from app.services import site_service
+
+    if site_service.calls_public(db):
+        chat_service.post_system(db, room_id=call.room_id, event="call_ended", task=task,
+                                 detail={"call_id": str(call.id), "minutes": minutes, "people": len(people)})
     live.call_changed(db, call)
 
 

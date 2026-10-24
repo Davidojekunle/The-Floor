@@ -127,6 +127,10 @@ def forget_all(db: Session, user_id) -> None:
 def queue(db: Session, user_id, *, title: str, body: str | None, url: str, tag: str) -> None:
     if not get_settings().push_enabled:
         return
+    from app.services import site_service
+
+    if not site_service.push(db):
+        return  # staff paused push for the whole site
     if not db.scalar(select(exists().where(PushSubscription.user_id == user_id))):
         return  # no browser registered: don't wake the pool
     db.info.setdefault(_PENDING, []).append((user_id, {"title": title, "body": body, "url": url, "tag": tag}))

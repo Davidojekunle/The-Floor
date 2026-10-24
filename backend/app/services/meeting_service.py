@@ -221,8 +221,12 @@ def _email(db: Session, room: Room, user_id, subject: str, title: str, paragraph
     from app.services.account_service import gets_notification_emails
     from app.services.notification_email import LABEL, unsubscribe_url
 
+    from app.services import site_service
+
     user = db.get(User, user_id)
     s = notes.settings_for(db, user_id)
+    if not site_service.notification_emails(db):
+        return  # staff paused notification emails for the whole site
     if user is None or not (s.email_enabled and s.calls) or not gets_notification_emails(user) \
             or notes.is_muted(db, user_id, room.id):
         return
@@ -242,11 +246,15 @@ def _tell(db: Session, ctx: RoomContext | None, room: Room, call: Call, kind: st
           title: str, email_subject: str, paragraphs, calendar: str | None, cancel: bool = False) -> None:
     from app.services import notification_service as notes
 
+    from app.services import site_service
+
     base = get_settings().frontend_url.rstrip("/")
     task = db.get(Task, call.task_id) if call.task_id else None
     for uid in people:
         if actor is not None and uid == actor.id:
             continue  # never for your own actions
+        if not site_service.calls_for(db, db.get(User, uid)):
+            continue  # calls are on for staff only, and this person isn't
         notes.notify(db, uid, kind, title, room=room, task=task, actor=actor, data={"call_id": str(call.id)})
         target = f"{base}/rooms/{room.id}/calls/{call.id}" if not cancel else f"{base}/rooms/{room.id}/calls"
         _email(db, room, uid, email_subject, title, paragraphs(uid), ("Open in The Floor", target), calendar, cancel)
@@ -276,9 +284,12 @@ def schedule(db: Session, ctx: RoomContext, body) -> Call:
     first = calls[0]
     repeat_note = (f"every {'week' if body.repeat.every == 'week' else 'two weeks'} until "
                    f"{body.repeat.until.strftime('%d %b').lstrip('0')}") if body.repeat else None
-    chat_service.post_system(db, room_id=ctx.room.id, event="meeting_scheduled", actor_id=organiser.id, task=task,
-                             detail={"call_id": str(first.id), "title": first.title,
-                                     "starts_at": as_utc(first.starts_at).isoformat(), "repeat": repeat_note})
+    from app.services import site_service
+
+    if site_service.calls_public(db):
+        chat_service.post_system(db, room_id=ctx.room.id, event="meeting_scheduled", actor_id=organiser.id, task=task,
+                                 detail={"call_id": str(first.id), "title": first.title,
+                                         "starts_at": as_utc(first.starts_at).isoformat(), "repeat": repeat_note})
     people = invitees(db, first)
     _tell(db, ctx, ctx.room, first, "meeting_scheduled", people, organiser,
           f"{organiser.name} invited you to {first.title}",
@@ -376,9 +387,12 @@ def cancel(db: Session, ctx: RoomContext, call_id, *, following: bool) -> None:
     db.flush()
     which = "and the ones after it" if len(targets) > 1 else ""
     task = db.get(Task, call.task_id) if call.task_id else None
-    chat_service.post_system(db, room_id=ctx.room.id, event="meeting_cancelled", actor_id=actor.id, task=task,
-                             detail={"call_id": str(call.id), "title": call.title,
-                                     "starts_at": as_utc(call.starts_at).isoformat(), "count": len(targets)})
+    from app.services import site_service
+
+    if site_service.calls_public(db):
+        chat_service.post_system(db, room_id=ctx.room.id, event="meeting_cancelled", actor_id=actor.id, task=task,
+                                 detail={"call_id": str(call.id), "title": call.title,
+                                         "starts_at": as_utc(call.starts_at).isoformat(), "count": len(targets)})
     _tell(db, ctx, ctx.room, call, "meeting_cancelled", people, actor, f"{actor.name} cancelled {call.title}",
           f"Cancelled: {call.title} · {when(call.starts_at, actor.timezone)}",
           lambda uid: [f"{call.title} on {when(call.starts_at, db.get(User, uid).timezone)} {which} won't happen.".replace("  ", " ")],

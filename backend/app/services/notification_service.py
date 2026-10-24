@@ -112,6 +112,10 @@ def unmute(db: Session, user: User, room_id) -> None:
 
 def _email_due(db: Session, user_id, category: str, now):
     """When this notification's email goes out, or None for no email. Joins an open group if there is one."""
+    from app.services import site_service
+
+    if not site_service.notification_emails(db):
+        return None  # staff paused notification emails for the whole site
     s = settings_for(db, user_id)
     if not (s.email_enabled and getattr(s, category)):
         return None
@@ -295,8 +299,11 @@ def call_started(db: Session, ctx: RoomContext, call, task: Task | None) -> None
         who = set().union(*_participants(db, ctx.room.id, stages).values()) | {task.created_by}
         who &= live.room_members(db, ctx.room.id)
         title = f"{actor.name} started a call about {task.title}"
+    from app.services import site_service
+
     for uid in who:
-        notify(db, uid, "call_started", title, room=ctx.room, task=task, actor=actor, data={"call_id": str(call.id)})
+        if site_service.calls_for(db, db.get(User, uid)):  # staff-only testing: nobody else hears of it
+            notify(db, uid, "call_started", title, room=ctx.room, task=task, actor=actor, data={"call_id": str(call.id)})
 
 
 def join_requested(db: Session, room, requester: User) -> None:

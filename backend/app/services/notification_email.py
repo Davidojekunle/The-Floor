@@ -116,13 +116,16 @@ def flush_due(db: Session, now: datetime | None = None) -> int:
         .order_by(Notification.user_id, Notification.category, Notification.created_at)
     ))
     sent = 0
+    from app.services import site_service
+
+    paused = not site_service.notification_emails(db)  # staff paused them: these are marked, not sent
     for (user_id, category), group in groupby(rows, key=lambda n: (n.user_id, n.category)):
         group = list(group)
         for n in group:
             n.emailed_at = now
         user = db.get(User, user_id)
         s = notes.settings_for(db, user_id)
-        if user is None or not (s.email_enabled and getattr(s, category)):
+        if paused or user is None or not (s.email_enabled and getattr(s, category)):
             continue  # switched off during the window
         muted = set(notes.muted_room_ids(db, user_id))
         # already seen in the bell, or muted since: no need to email it
@@ -217,8 +220,11 @@ def send_digests(db: Session, now: datetime | None = None) -> int:
     now = now or utcnow()
     hour = get_settings().digest_hour
     sent = 0
+    from app.services import site_service
     from app.services.account_service import gets_notification_emails
 
+    if not site_service.daily_digest(db):
+        return 0  # staff paused the daily digest (or all notification emails)
     for user in db.scalars(select(User)):
         if not gets_notification_emails(user):
             continue

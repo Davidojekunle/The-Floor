@@ -29,7 +29,7 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.schemas.errors import ErrorResponse
-from app.services import account_service, auth_service, email_service, password_service, session_service
+from app.services import account_service, auth_service, email_service, password_service, room_service, session_service, site_service
 from app.services.auth_service import normalize_email
 
 router = APIRouter()
@@ -61,6 +61,8 @@ def _clear_cookie(response: Response) -> None:
 def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     limiter.hit(f"register:ip:{client_ip(request)}", 50, HOUR)  # loose: a whole class may share one IP
     limiter.hit(f"register:email:{normalize_email(body.email)}", 3, HOUR)
+    if not site_service.signups_open(db) and not room_service.has_open_invite(db, body.email):
+        raise Forbidden("New sign-ups are closed for now. If a room invited you by email, use that address.")
     user = auth_service.register_user(
         db, name=body.name, email=body.email, password=body.password, timezone=body.timezone
     )

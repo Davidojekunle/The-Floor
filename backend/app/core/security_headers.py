@@ -15,7 +15,10 @@ FRAME_SOURCES = (
 def _calls_on() -> bool:
     from app.core.config import get_settings
 
-    return get_settings().calls_enabled
+    from app.services.site_service import calls_ready
+
+    s = get_settings()
+    return s.calls_enabled or (calls_ready() and s.video_provider != "fake")  # the page may host a call
 
 
 def permissions_policy() -> str:

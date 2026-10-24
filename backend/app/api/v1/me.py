@@ -13,7 +13,7 @@ from app.schemas.auth import MeResponse, UpdateMeRequest
 from app.schemas.call import CallPage
 from app.schemas.common import PageParams, UtcDateTime, page_params_tasks
 from app.schemas.task import MyTaskPage
-from app.services import account_service, my_task_service, notification_service, room_service
+from app.services import account_service, my_task_service, notification_service, room_service, site_service
 
 router = APIRouter()
 
@@ -30,7 +30,8 @@ def build_me(db: Session, user: User) -> MeResponse:
         rooms=room_service.list_rooms_for_user(db, user),
         is_staff=user.is_staff,
         email_verified=account_service.is_verified(user),
-        calls_enabled=get_settings().calls_enabled,
+        calls_enabled=site_service.calls_for(db, user),
+        announcement=site_service.get(db)["announcement"],
     )
 
 
@@ -81,7 +82,7 @@ def list_my_calls(
     db: Session = Depends(get_db),
 ):
     """My calendar: meetings I'm invited to in the window, and calls live now, across my rooms."""
-    if not get_settings().calls_enabled:
+    if not site_service.calls_for(db, user):
         from app.core.errors import NotFound
 
         raise NotFound("Not found.")

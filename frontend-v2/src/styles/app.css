@@ -1749,3 +1749,58 @@ a.row:hover {
     padding-left: 40px;
   }
 }
+
+/* ---------- Admin: site switches, call minutes; the announcement banner ---------- */
+.admin-switches {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  padding: 8px 16px;
+}
+.admin-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.admin-announce {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0 6px;
+  border-top: 1px solid var(--border);
+}
+.admin-meter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+  margin-top: 12px;
+}
+.admin-meter span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.announce-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 16px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.announce-bar > svg.i {
+  flex: none;
+  color: var(--accent);
+}
+.admin-announce .invite-field .input {
+  font-family: inherit; /* a sentence, not a link */
+}

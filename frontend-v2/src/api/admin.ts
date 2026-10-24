@@ -36,6 +36,35 @@ export type AdminStats = {
   }
   activity: { messages_7d: number; updates_7d: number; nudges_30d: number; nudges_answered_30d: number }
   weeks: { week_start: string; signups: number; tasks_created: number; stages_done: number; messages: number }[]
+  calls: {
+    ready: boolean // LiveKit is configured on the server
+    mode: 'off' | 'staff' | 'everyone'
+    minutes_this_month: number // one person for one minute
+    free_minutes: number
+    calls_this_month: number
+    live_now: number
+    meetings_upcoming: number
+  }
 }
 
 export const getAdminStats = () => apiRequest<AdminStats>('/admin/stats')
+
+/** Site-wide switches staff change from the admin page. */
+export type SiteSettings = {
+  calls: 'off' | 'staff' | 'everyone'
+  calls_ready: boolean // LiveKit is set up; calls can't be turned on without it
+  signups_open: boolean
+  notification_emails: boolean // security emails always go
+  daily_digest: boolean
+  push: boolean
+  announcement: string | null
+}
+
+export const getSiteSettings = () => apiRequest<SiteSettings>('/admin/settings')
+
+export const updateSiteSettings = (change: Partial<SiteSettings>) =>
+  apiRequest<SiteSettings>('/admin/settings', { method: 'PATCH', body: change })
+
+/** For any visitor: whether sign-ups are open, and staff's announcement. */
+export const getSite = () =>
+  apiRequest<{ signups_open: boolean; announcement: string | null }>('/site', { auth: false })

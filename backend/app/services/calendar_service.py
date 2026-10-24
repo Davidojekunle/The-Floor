@@ -124,7 +124,9 @@ def _meeting_event(call, url: str, stamp: str) -> list[str]:
 def _meetings(db: Session, user: User, room_id, base: str, stamp: str) -> list[str]:
     from app.services import meeting_service
 
-    if not get_settings().calls_enabled:
+    from app.services import site_service
+
+    if not site_service.calls_for(db, user):
         return []
     out: list[str] = []
     for call in meeting_service.for_feed(db, user, room_id):

@@ -318,6 +318,14 @@ def _open_invite(db: Session, room_id: uuid.UUID, user: User) -> RoomInvite | No
     ))
 
 
+def has_open_invite(db: Session, email: str) -> bool:
+    """A room emailed this address an invite that still works (sign-ups stay open to them)."""
+    from app.services.auth_service import normalize_email
+
+    return db.scalar(select(RoomInvite.id).where(RoomInvite.email == normalize_email(email), RoomInvite.accepted_at.is_(None),
+                                                 RoomInvite.expires_at > utcnow()).limit(1)) is not None
+
+
 def invite_by_email(db: Session, ctx: RoomContext, emails: list[str], link_base: str) -> InviteEmailsOut:
     """Email each address the room's link. Signing in with that address and opening it lets them straight in.
     Inviting again refreshes the invite and sends a new email."""

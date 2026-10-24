@@ -171,6 +171,7 @@ def stats(db: Session, now: datetime | None = None) -> dict:
     }
 
     return {
+        "calls": _calls(db, now),
         "generated_at": now,
         "health": _health(db, now),
         "people": people,
@@ -200,3 +201,30 @@ def _weeks(db: Session, now: datetime) -> list[dict]:
             if 0 <= i < WEEKS:
                 weeks[i][key] += 1
     return weeks
+
+
+FREE_MINUTES = 5000  # LiveKit Cloud's free Build plan; past it, new calls fail rather than cost money
+
+
+def _calls(db: Session, now: datetime) -> dict:
+    from app.models.call import Call, CallKind, CallParticipant, CallStatus
+    from app.services import site_service
+
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    seconds = 0.0
+    for joined, left in db.execute(select(CallParticipant.joined_at, CallParticipant.left_at).where(
+            or_(CallParticipant.left_at.is_(None), CallParticipant.left_at >= month_start))):
+        start = max(_aware(joined), month_start)
+        end = _aware(left) or now
+        seconds += max(0.0, (end - start).total_seconds())
+    return {
+        "ready": site_service.calls_ready(),
+        "mode": site_service.calls_mode(db),
+        "minutes_this_month": round(seconds / 60),
+        "free_minutes": FREE_MINUTES,
+        "calls_this_month": _count(db, select(func.count()).select_from(Call).where(
+            Call.started_at >= month_start)),
+        "live_now": _count(db, select(func.count()).select_from(Call).where(Call.status == CallStatus.LIVE)),
+        "meetings_upcoming": _count(db, select(func.count()).select_from(Call).where(
+            Call.kind == CallKind.SCHEDULED, Call.status == CallStatus.SCHEDULED, Call.starts_at > now)),
+    }

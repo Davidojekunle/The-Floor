@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     support_email: str = "support@thefloorapp.me"  # where in-app feedback goes
 
     # calls (contract v4). Off until launch: the endpoints answer 404 and /me says calls are unavailable.
-    calls_enabled: bool = False
+    calls_enabled: bool = False  # forces calls on for everyone (tests, local); live sites use the admin switch
     video_provider: str = "livekit"  # livekit | fake (tests)
     livekit_url: str = ""  # wss://<project>.livekit.cloud
     livekit_api_key: str = ""

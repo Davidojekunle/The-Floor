@@ -33,7 +33,9 @@ async def lifespan(app: FastAPI):
     if settings.email_sender_enabled:  # also the switch for the other background loops (off in tests)
         factory = app.dependency_overrides.get(get_db, get_db)
         tasks.append(asyncio.create_task(run_sender(factory, settings.email_send_interval_seconds)))
-        if settings.calls_enabled:
+        from app.services.site_service import calls_ready
+
+        if settings.calls_enabled or calls_ready():  # harmless while calls are off: nothing is live
             tasks.append(asyncio.create_task(run_checker(factory, settings.call_check_interval_seconds)))
     yield
     for task in tasks:

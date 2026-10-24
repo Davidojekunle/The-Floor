@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
 import { getAdminStats, type AdminStats } from '../api/admin'
+import { AdminSettings } from './AdminSettings'
 import { useAuth } from '../auth/useAuth'
 import { relativeTime } from '../lib/dates'
 import { useTimezone } from '../lib/useTimezone'
@@ -49,7 +50,10 @@ export function AdminPage() {
             <p>The numbers didn't load. Refresh to try again.</p>
           </div>
         ) : (
-          <AdminBody s={stats.data} />
+          <>
+            <AdminSettings />
+            <AdminBody s={stats.data} />
+          </>
         )}
       </div>
     </div>
@@ -127,6 +131,26 @@ function AdminBody({ s }: { s: AdminStats }) {
           <Stat value={s.activity.updates_7d} label="Progress updates" note="this week" />
           <Stat value={s.activity.nudges_30d} label="Nudges" note="in 30 days" />
           <Stat value={answered === null ? '–' : `${answered}%`} label="Nudges answered" note="in 30 days" />
+        </div>
+      </section>
+
+      <section className="admin-sec" aria-labelledby="adm-calls">
+        <h2 id="adm-calls">Calls</h2>
+        <div className="admin-stats">
+          <Stat
+            value={`${s.calls.minutes_this_month.toLocaleString()}`}
+            label="Call minutes this month"
+            note={`of ${s.calls.free_minutes.toLocaleString()} free · new calls stop past it`}
+            tone={s.calls.minutes_this_month > s.calls.free_minutes * 0.8 ? 'attn' : undefined}
+          />
+          <Stat value={s.calls.calls_this_month} label="Calls this month" />
+          <Stat value={s.calls.live_now} label="Live now" />
+          <Stat value={s.calls.meetings_upcoming} label="Meetings coming up" />
+          <Stat value={{ off: 'Off', staff: 'Staff only', everyone: 'Everyone' }[s.calls.mode]} label="Calls are on for"
+            note={s.calls.ready ? 'LiveKit connected' : 'LiveKit not set up'} />
+        </div>
+        <div className="admin-meter" role="img" aria-label={`${Math.round((s.calls.minutes_this_month / s.calls.free_minutes) * 100)}% of the free minutes used`}>
+          <span style={{ width: `${Math.min(100, (s.calls.minutes_this_month / s.calls.free_minutes) * 100)}%` }} />
         </div>
       </section>
 

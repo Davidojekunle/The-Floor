@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.common import UtcDateTime
 
@@ -74,4 +76,51 @@ class AdminStats(BaseModel):
     rooms: AdminRooms
     work: AdminWork
     activity: AdminActivity
+    calls: "AdminCalls"
     weeks: list[AdminWeek]
+
+
+class AdminCalls(BaseModel):
+    ready: bool = Field(description="LiveKit is configured on this server")
+    mode: Literal["off", "staff", "everyone"]
+    minutes_this_month: int = Field(description="Participant minutes: one person for one minute")
+    free_minutes: int = Field(description="The provider's free monthly allowance (new calls stop past it)")
+    calls_this_month: int
+    live_now: int
+    meetings_upcoming: int
+
+
+class SiteSettings(BaseModel):
+    calls: Literal["off", "staff", "everyone"] = Field(description="Who has calls and meetings")
+    calls_ready: bool = Field(False, description="LiveKit is configured; calls can't be switched on without it")
+    signups_open: bool = Field(description="New accounts can be made (people invited by email always can)")
+    notification_emails: bool = Field(description="Notification and meeting emails. Security emails always go.")
+    daily_digest: bool
+    push: bool = Field(description="Pop-up notifications on devices")
+    announcement: str | None = Field(None, description="A banner shown to everyone signed in")
+
+
+class SiteSettingsUpdate(BaseModel):
+    """Send only what changes."""
+
+    calls: Literal["off", "staff", "everyone"] | None = None
+    signups_open: bool | None = None
+    notification_emails: bool | None = None
+    daily_digest: bool | None = None
+    push: bool | None = None
+    announcement: str | None = Field(None, max_length=300, description="Empty clears it")
+
+    @field_validator("announcement")
+    @classmethod
+    def tidy(cls, v):
+        return (v or "").strip() or None
+
+
+class SiteInfo(BaseModel):
+    """What any visitor may know."""
+
+    signups_open: bool
+    announcement: str | None
+
+
+AdminStats.model_rebuild()

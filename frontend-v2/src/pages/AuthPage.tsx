@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
+import { useQuery } from '@tanstack/react-query'
+import { getSite } from '../api/admin'
 import { Logo } from '../components/Logo'
 import { PasswordInput } from '../components/PasswordInput'
 
@@ -21,6 +23,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const notice = (location.state as { notice?: string } | null)?.notice // e.g. after a password reset
   const fromInvite = from.startsWith('/join/') // an invite link sent them here
   const isRegister = mode === 'register'
+  const site = useQuery({ queryKey: ['site'], queryFn: getSite, enabled: isRegister, staleTime: 60_000 })
+  const closed = isRegister && site.data?.signups_open === false
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -96,6 +100,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
           </div>
 
           {notice && !formError && <div className="notice">{notice}</div>}
+          {closed && !formError && (
+            <div className="notice">
+              New sign-ups are closed for now. If a room invited you by email, sign up with that address.
+            </div>
+          )}
           {sessionExpired && !notice && !formError && <div className="notice">Your session ended. Sign in to carry on.</div>}
           {formError && (
             <div className="form-error" role="alert">

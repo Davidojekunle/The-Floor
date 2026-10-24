@@ -7,7 +7,8 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_room_context
+from app.api.deps import get_current_user, get_room_context
+from app.models.user import User
 from app.core.config import get_settings
 from app.core.errors import NotFound, Unauthenticated
 from app.core.openapi import err
@@ -17,11 +18,12 @@ from app.permissions.rules import RoomContext
 from app.schemas.call import CallOut, CallPage, ClashCheck, ClashOut, JoinPass, MeetingIn, MeetingUpdate, StartCall
 from app.schemas.common import UtcDateTime
 from app.schemas.common import PageParams, page_params
-from app.services import call_service, meeting_service, video
+from app.services import call_service, meeting_service, site_service, video
 
 
-def calls_on() -> None:
-    if not get_settings().calls_enabled:
+def calls_on(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> None:
+    """Calls are on for this person: everyone, or staff while the admin has them on for staff only."""
+    if not site_service.calls_for(db, user):
         raise NotFound("Not found.")
 
 

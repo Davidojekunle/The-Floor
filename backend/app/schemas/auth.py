@@ -81,7 +81,8 @@ class MeResponse(UserOut):
     rooms: list[RoomSummary] = []
     is_staff: bool = Field(False, description="Can open the admin page (health and usage totals).")
     email_verified: bool = Field(False, description="Clicked the link we emailed. Until then the app asks them to.")
-    calls_enabled: bool = Field(False, description="Calls are switched on for this site. Off: hide every call control.")
+    calls_enabled: bool = Field(False, description="Calls are on for this person (everyone, or staff while testing).")
+    announcement: str | None = Field(None, description="Staff's site-wide message, shown as a banner")
 
 
 class UpdateMeRequest(BaseModel):

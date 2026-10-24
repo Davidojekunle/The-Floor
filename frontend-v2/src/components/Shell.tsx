@@ -13,6 +13,7 @@ import { useTimezone } from '../lib/useTimezone'
 import { Avatar } from './Avatar'
 import { FeedbackDialog } from './FeedbackDialog'
 import { VerifyBanner } from './VerifyBanner'
+import { AnnouncementBanner } from './AnnouncementBanner'
 import { Icon, type IconName } from './Icon'
 import { usePushRouting } from '../lib/usePushRouting'
 import { Menu, type MenuItem } from './Menu'
@@ -89,6 +90,7 @@ export function Shell() {
         {phone && <PhoneTop room={room} />}
         <main className={`pane-scroll${fill ? ' fill' : ''}`} ref={pane}>
           {/* inside the scrolling area, which already clears the floating phone top bar */}
+          <AnnouncementBanner />
           <VerifyBanner />
           <Outlet />
         </main>

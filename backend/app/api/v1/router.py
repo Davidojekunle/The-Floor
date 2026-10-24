@@ -40,6 +40,7 @@ api_router.include_router(calls.meetings, prefix="/rooms/{room_id}/meetings", ta
 api_router.include_router(calls.webhooks, tags=["calls"])
 api_router.include_router(calendar.router, tags=["calendar"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(admin.public, tags=["site"])
 api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"], responses=AUTHED_RESPONSES)
 api_router.include_router(join.router, prefix="/join", tags=["join"], responses=AUTHED_RESPONSES)
 api_router.include_router(tags.router, prefix="/rooms/{room_id}/tags", tags=["tags"], responses=AUTHED_RESPONSES)
