@@ -188,6 +188,7 @@ function AppearanceSection() {
 }
 
 function NotificationsSection() {
+  const { user } = useAuth()
   const { settings, isPending, update } = useNotificationSettings()
   if (isPending || !settings) return null
   const off = !settings.email_enabled
@@ -238,6 +239,14 @@ function NotificationsSection() {
           checked={settings.mentions}
           onChange={(v) => update({ mentions: v })}
         />
+        {user?.calls_enabled && (
+          <Switch
+            label="Calls"
+            detail="Someone starts a call in your room or about your task. A bell item and a pop-up, never an email."
+            checked={settings.calls}
+            onChange={(v) => update({ calls: v })}
+          />
+        )}
         <Switch
           label="Every chat message"
           detail="A pop-up on your devices for each new message in your rooms, not just mentions. No emails."

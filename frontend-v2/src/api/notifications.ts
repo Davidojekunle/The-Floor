@@ -19,6 +19,7 @@ export type NotificationType =
   | 'nudge_answered'
   | 'stage_due_soon'
   | 'stage_overdue'
+  | 'call_started'
 
 type Named = { id: string; name: string }
 type Titled = { id: string; title: string }
@@ -41,6 +42,7 @@ export type Notification = {
     result_url?: string // stage_ready: the finished work from the stage before
     result_stage?: string
     message_id?: string
+    call_id?: string // call_started
     stages?: { task_id: string; task_title: string; stage_id: string; stage_title: string }[]
   } | null
   created_at: string
@@ -67,6 +69,7 @@ export type NotificationSettings = {
   daily_digest: boolean
   mentions: boolean // @mentions: bell, email and push
   all_messages: boolean // a push for every chat message (push only)
+  calls: boolean // someone starts a call you're part of: bell and push
   muted_rooms: string[] // no emails and no bell items from these rooms
 }
 

@@ -11,7 +11,9 @@ import { RoomContext } from './roomContext'
 export function RoomProvider() {
   const { roomId = '' } = useParams()
   const { user, refreshUser } = useAuth()
-  const fullBleed = !!useMatch('/rooms/:roomId/chat') // chat fills the width, like Slack's main pane
+  const chat = useMatch('/rooms/:roomId/chat')
+  const call = useMatch('/rooms/:roomId/calls/:callId')
+  const fullBleed = !!(chat || call) // chat and calls fill the width, like Slack's main pane
 
   const query = useQuery({
     queryKey: ['room', roomId],

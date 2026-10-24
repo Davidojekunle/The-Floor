@@ -38,6 +38,7 @@ CATEGORY = {
     "stage_ready": "assignments",
     "stage_assigned": "assignments",
     "mentioned": "mentions",
+    "call_started": "calls",
     "replied": "mentions",  # a reply is a way of addressing you, so it shares the Mentions switch
     "nudged": "assignments",  # a head asked for an update on your stage
     "stage_due_soon": "assignments",  # automatic reminders
@@ -45,7 +46,9 @@ CATEGORY = {
     "nudge_answered": "decisions",  # someone answered the nudge you sent
 }
 TYPES = tuple(CATEGORY)
-SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest", "mentions", "all_messages")
+SWITCHES = ("email_enabled", "requests", "decisions", "assignments", "daily_digest", "mentions", "all_messages",
+            "calls")
+NO_EMAIL = {"call_started"}  # an email would arrive after the call is over: bell and push only
 _DUE = "_notification_email_due"  # per-transaction: (user, category) -> due time, for rows not yet flushed
 
 
@@ -56,7 +59,8 @@ def settings_for(db: Session, user_id) -> NotificationSettings:
     row = db.get(NotificationSettings, user_id)
     if row is None:
         row = NotificationSettings(user_id=user_id, email_enabled=True, requests=True, decisions=True,
-                                   assignments=True, daily_digest=True, mentions=True, all_messages=False)
+                                   assignments=True, daily_digest=True, mentions=True, all_messages=False,
+                                   calls=True)
     return row
 
 
@@ -138,7 +142,8 @@ def notify(db: Session, user_id, type_: str, title: str, *, room=None, task=None
         task_id=task.id if task else None, task_title=task.title if task else None,
         stage_id=stage.id if stage else None, stage_title=stage.title if stage else None,
         actor_id=actor.id if actor else None, actor_name=actor.name if actor else None,
-        data=data, created_at=now, email_due_at=_email_due(db, user_id, category, now),
+        data=data, created_at=now,
+        email_due_at=None if type_ in NO_EMAIL else _email_due(db, user_id, category, now),
     )
     db.add(n)
     live.notification_created(db, user_id, n.room_id, n.id)
@@ -162,6 +167,8 @@ def target_path(n: Notification) -> str:
     room = f"/rooms/{n.room_id}"
     if n.type in ("mentioned", "replied"):
         return f"{room}/chat"
+    if n.type == "call_started" and n.data and n.data.get("call_id"):
+        return f"{room}/calls/{n.data['call_id']}"
     if n.type in ("join_requested", "proposal_submitted"):
         return f"{room}/requests"
     if n.type == "stages_unassigned":
@@ -268,6 +275,21 @@ def _participants(db: Session, room_id, stages) -> dict:
 
 
 # ================================================================== triggers
+
+def call_started(db: Session, ctx: RoomContext, call, task: Task | None) -> None:
+    """A room call: everyone in the room. A task call: the task's people (its stages' people and its creator)."""
+    actor = _actor(db, ctx)
+    if task is None:
+        who = live.room_members(db, ctx.room.id)
+        title = f"{actor.name} started a call in {ctx.room.name}"
+    else:
+        stages = list(db.scalars(select(Stage).where(Stage.task_id == task.id)))
+        who = set().union(*_participants(db, ctx.room.id, stages).values()) | {task.created_by}
+        who &= live.room_members(db, ctx.room.id)
+        title = f"{actor.name} started a call about {task.title}"
+    for uid in who:
+        notify(db, uid, "call_started", title, room=ctx.room, task=task, actor=actor, data={"call_id": str(call.id)})
+
 
 def join_requested(db: Session, room, requester: User) -> None:
     head = head_id(db, room.id)

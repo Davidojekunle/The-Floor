@@ -1,6 +1,7 @@
 import os
 
 # Set before the app is imported, so Settings can load without a real .env
+os.environ["ENV_FILE"] = ".env.tests-read-no-file"  # never anyone's backend/.env: tests get the defaults
 os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://taskroom:taskroom@localhost:5432/taskroom")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-at-least-32-bytes-long")
 os.environ["BCRYPT_ROUNDS"] = "4"  # fast hashing in tests

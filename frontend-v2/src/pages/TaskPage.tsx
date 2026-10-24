@@ -27,6 +27,7 @@ import { googleCalendarEventUrl, openInNewTab } from '../lib/googleCalendar'
 import { StageUpdates, TaskUpdatesFeed } from '../room/StageUpdates'
 import { StageResultLine, WorkSoFar } from '../room/StageResult'
 import { useRoomError } from '../room/useRoomError'
+import { CallButton } from '../room/CallButton'
 
 export function TaskPage() {
   const { taskId = '' } = useParams()
@@ -144,7 +145,10 @@ export function TaskPage() {
             </span>
           </div>
         </div>
-        {items.length > 0 && <Menu label="Task actions" triggerClassName="btn" trigger={<Icon name="more" />} items={items} />}
+        <div className="head-actions">
+          {!isProposal && <CallButton taskId={t.id} live={t.live_call} />}
+          {items.length > 0 && <Menu label="Task actions" triggerClassName="btn" trigger={<Icon name="more" />} items={items} />}
+        </div>
       </div>
 
       {t.description && <p className="desc">{t.description}</p>}

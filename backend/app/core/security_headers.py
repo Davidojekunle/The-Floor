@@ -12,9 +12,26 @@ FRAME_SOURCES = (
 )
 
 
+def _daily() -> str | None:
+    """Daily's call screen origin while calls are on (it's framed, and needs the camera and microphone)."""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    return f"https://{s.daily_domain}.daily.co" if s.calls_enabled else None
+
+
+def permissions_policy() -> str:
+    daily = _daily()
+    av = f'(self "{daily}")' if daily else "()"
+    return f"camera={av}, microphone={av}, display-capture={av}, geolocation=(), payment=(), usb=()"
+
+
 def csp(host: str) -> str:
     # 'self' covers same-origin WebSockets in current browsers; the explicit ws/wss entries cover older Safari.
     live = f" wss://{host} ws://{host}" if host else ""
+    daily = _daily()
+    if daily:
+        live += " https://*.daily.co wss://*.daily.co"
     return "; ".join((
         "default-src 'self'",
         "script-src 'self'",
@@ -23,7 +40,7 @@ def csp(host: str) -> str:
         "media-src 'self' blob: https:",
         "font-src 'self' data:",
         f"connect-src 'self'{live}",
-        f"frame-src {FRAME_SOURCES}",
+        f"frame-src {FRAME_SOURCES}{' ' + daily if daily else ''}",
         "worker-src 'self'",
         "manifest-src 'self'",
         "object-src 'none'",
@@ -51,7 +68,7 @@ class SecurityHeaders:
                     (b"x-content-type-options", b"nosniff"),
                     (b"x-frame-options", b"DENY"),
                     (b"referrer-policy", b"strict-origin-when-cross-origin"),
-                    (b"permissions-policy", b"camera=(), microphone=(), geolocation=(), payment=(), usb=()"),
+                    (b"permissions-policy", permissions_policy().encode("latin-1")),
                     (b"cross-origin-opener-policy", b"same-origin"),
                 ]
                 if https:  # only over https: a browser ignores HSTS on plain http anyway

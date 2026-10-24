@@ -52,6 +52,7 @@ class NotificationSettings(Base):
     daily_digest: Mapped[bool] = mapped_column(Boolean, default=True)
     mentions: Mapped[bool] = mapped_column(Boolean, default=True)  # someone @mentions you in chat
     all_messages: Mapped[bool] = mapped_column(Boolean, default=False)  # push for every chat message (push only)
+    calls: Mapped[bool] = mapped_column(Boolean, default=True)  # a call started (bell and push; meetings by email in C2)
     last_digest_on: Mapped[date | None] = mapped_column(Date, nullable=True)  # the user's local date
 
 

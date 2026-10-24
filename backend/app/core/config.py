@@ -26,6 +26,17 @@ class Settings(BaseSettings):
     email_from: str = "The Floor <no-reply@localhost>"
     resend_api_key: str = ""  # for email_backend=resend
     support_email: str = "support@thefloorapp.me"  # where in-app feedback goes
+
+    # calls (contract v4). Off until launch: the endpoints answer 404 and /me says calls are unavailable.
+    calls_enabled: bool = False
+    video_provider: str = "daily"  # daily | fake (tests)
+    daily_api_key: str = ""
+    daily_domain: str = "thefloor"  # https://<daily_domain>.daily.co
+    daily_webhook_secret: str = ""  # base64 HMAC secret of the Daily webhook; empty: webhooks are refused
+    call_max_participants: int = 20  # the most Daily's free plan allows (the contract said 25)
+    call_max_minutes: int = 180
+    call_empty_grace_seconds: int = 120  # a call ends this long after the last person leaves
+    call_check_interval_seconds: float = 60  # the loop that asks the provider who is in each live call
     smtp_host: str = "localhost"
     smtp_port: int = 587
     smtp_username: str = ""

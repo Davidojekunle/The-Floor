@@ -21,6 +21,7 @@ class RoomSummary(BaseModel):
     mine_actionable: int = 0  # tasks here where one of MY stages is todo, in_progress, or blocked
     temp_head_expires_at: datetime | None = None  # set while I'm an active temp head in this room
     unread_messages: int = 0  # chat messages after my read position (not mine, not about my own actions)
+    live_call: "LiveCall | None" = None  # a room call is live: the switcher shows a dot
 
 
 class RoomCreate(BaseModel):
@@ -98,3 +99,8 @@ class TransferHead(BaseModel):
 
 class DeleteRoom(BaseModel):
     confirm_name: str = Field(min_length=1, max_length=100)
+
+
+from app.schemas.call import LiveCall  # noqa: E402  (call.py imports UserBrief from here)
+
+RoomSummary.model_rebuild()

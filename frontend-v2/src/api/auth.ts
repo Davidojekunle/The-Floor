@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import type { LiveCall } from './calls'
 
 export type RoomRole = 'head' | 'temp_head' | 'member'
 
@@ -12,6 +13,7 @@ export type RoomSummary = {
   mine_actionable: number // tasks here where one of my stages needs me
   temp_head_expires_at: string | null // when my temp-head grant here ends
   unread_messages: number // chat messages since I last read (not mine, not deleted)
+  live_call?: LiveCall | null // a room call is live: the switcher shows a dot
 }
 
 export type Theme = 'system' | 'light' | 'dark'
@@ -27,6 +29,7 @@ export type Me = {
   rooms: RoomSummary[]
   is_staff: boolean // can open /admin (health and usage totals)
   email_verified: boolean // clicked the link we emailed; until then a banner asks them to
+  calls_enabled: boolean // calls are switched on for this site; off: no call controls anywhere
 }
 
 export type MeUpdate = { name?: string; timezone?: string; theme?: Theme }

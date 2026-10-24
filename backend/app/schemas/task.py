@@ -75,6 +75,8 @@ class StageOut(BaseModel):
 
 
 class TaskDetail(BaseModel):
+    """`live_call`: a call about this task is live (the page shows Join)."""
+
     id: uuid.UUID
     room_id: uuid.UUID
     title: str
@@ -106,6 +108,7 @@ class TaskDetail(BaseModel):
     can_resubmit: bool
     can_decide: bool
     stages: list[StageOut]
+    live_call: "LiveCall | None" = None
 
 
 class TaskListItem(BaseModel):
@@ -274,3 +277,8 @@ class MyTaskPage(Page[MyTaskItem]):
 
 class RejectBody(BaseModel):
     reason: str | None = Field(None, max_length=500)
+
+
+from app.schemas.call import LiveCall  # noqa: E402
+
+TaskDetail.model_rebuild()

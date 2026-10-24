@@ -83,6 +83,12 @@ def task_updates_changed(db, task: Task, stage_id):
     _queue(db, _payload("task_updates_changed", task.room_id, task_id=task.id, stage_id=stage_id), ("task", task.id))
 
 
+def call_changed(db, call):
+    """A call started, someone joined or left, or it ended. A hint: the app refetches the call."""
+    ids = {"call_id": call.id, **({"task_id": call.task_id} if call.task_id else {})}
+    _queue(db, _payload("call_changed", call.room_id, **ids), ("room", call.room_id))
+
+
 def room_changed(db, room_id):
     _queue(db, _payload("room_changed", room_id), ("room", room_id))
 

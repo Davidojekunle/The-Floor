@@ -339,7 +339,14 @@ def build_detail(db: Session, ctx: RoomContext, task: Task, stages: list[Stage])
         can_resubmit=can_resubmit(ctx, task),
         can_decide=can_decide(ctx, task),
         stages=stage_out,
+        live_call=_live_call(db, task.id),
     )
+
+
+def _live_call(db: Session, task_id):
+    from app.services.call_service import live_call_for_task
+
+    return live_call_for_task(db, task_id)
 
 
 def build_list_item(task: Task, stages: list[Stage], involves_me: bool, now, creator: UserBrief) -> TaskListItem:

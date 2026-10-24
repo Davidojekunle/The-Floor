@@ -26,6 +26,9 @@ MATRIX = {
     "invite.manage":       (True,  False, False),
     "chat.send":           (True,  True,  True),
     "chat.delete_any":     (True,  True,  False),
+    "call.start":          (True,  True,  True),
+    "call.manage_any":     (True,  True,  False),
+    "meeting.schedule":    (True,  True,  False),
 }
 
 

@@ -71,6 +71,11 @@ export function LiveProvider({ children }: { children: ReactNode }) {
           inv(['activity', r]) // Home's "Recent activity"
           meSoon() // unread counts; an open chat fetches the message itself
           break
+        case 'call_changed': // started, someone joined or left, or ended: refetch it, and the live dots
+          inv(['call', r, e.call_id])
+          if (e.task_id) inv(['task', r, e.task_id])
+          meSoon()
+          break
         case 'task_changed':
         case 'task_deleted': // the task page refetches, gets 404 and says the task is gone
           inv(['task', r, e.task_id])

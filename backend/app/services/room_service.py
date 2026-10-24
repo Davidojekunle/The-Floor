@@ -131,6 +131,9 @@ def list_rooms_for_user(db: Session, user: User) -> list[RoomSummary]:
         return []
 
     room_ids = [room.id for _, room in rows]
+    from app.services.call_service import live_calls_by_room
+
+    live_calls = live_calls_by_room(db, room_ids)
     temp_head_until = dict(
         db.execute(
             select(TempHead.room_id, func.max(TempHead.expires_at))
@@ -202,6 +205,7 @@ def list_rooms_for_user(db: Session, user: User) -> list[RoomSummary]:
                 as_utc(temp_head_until[room.id]) if roles[room.id] == Role.TEMP_HEAD else None
             ),
             unread_messages=unread.get(room.id, 0),
+            live_call=live_calls.get(room.id),
         )
         for _, room in rows
     ]

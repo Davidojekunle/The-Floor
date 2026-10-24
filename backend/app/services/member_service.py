@@ -185,7 +185,10 @@ def stages_of(db: Session, room_id, m: Membership) -> set[uuid.UUID]:
 
 
 def release_membership(db: Session, room_id, m: Membership) -> None:
-    """Clean-up shared by removal and leaving: tags, temp head, stage assignments."""
+    """Clean-up shared by removal and leaving: tags, temp head, stage assignments, live calls."""
+    from app.services import call_service
+
+    call_service.drop_from_calls(db, room_id, m.user_id)
     db.execute(delete(MembershipTag).where(MembershipTag.membership_id == m.id))
     # a temp-head grant must not come back to life if this person is later re-approved
     db.execute(

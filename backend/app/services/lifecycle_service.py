@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import HeadMustTransfer, ValidationFailed
 from app.models.enums import MembershipStatus, Role
+from app.models.call import Call, CallParticipant
 from app.models.message import Message
 from app.models.progress import ProgressUpdate
 from app.models.room import Membership, Room, TempHead
@@ -86,7 +87,13 @@ def delete_room(db: Session, ctx: RoomContext, confirm_name: str) -> None:
     stage_ids = select(Stage.id).where(Stage.task_id.in_(task_ids))
     membership_ids = select(Membership.id).where(Membership.room_id == room_id)
     template_ids = select(TaskTemplate.id).where(TaskTemplate.room_id == room_id)
+    from app.services import call_service
+
+    call_service.close_provider_rooms(db, room_id)
+    call_ids = select(Call.id).where(Call.room_id == room_id)
     for statement in (
+        delete(CallParticipant).where(CallParticipant.call_id.in_(call_ids)),
+        delete(Call).where(Call.room_id == room_id),
         delete(ProgressUpdate).where(ProgressUpdate.task_id.in_(task_ids)),
         delete(StageAssignee).where(StageAssignee.stage_id.in_(stage_ids)),
         delete(MembershipTag).where(MembershipTag.membership_id.in_(membership_ids)),

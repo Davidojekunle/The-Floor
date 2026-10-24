@@ -67,6 +67,26 @@ class StageUnlockedEvent(_Event):
     detail: None = None
 
 
+class CallStartedDetail(BaseModel):
+    call_id: uuid.UUID  # the Join button reads this call's live state
+
+
+class CallStartedEvent(_Event):
+    type: Literal["call_started"]
+    detail: CallStartedDetail
+
+
+class CallEndedDetail(BaseModel):
+    call_id: uuid.UUID
+    minutes: int
+    people: int
+
+
+class CallEndedEvent(_Event):
+    type: Literal["call_ended"]
+    detail: CallEndedDetail
+
+
 class TaskCompletedEvent(_Event):
     type: Literal["task_completed"]
     detail: None = None
@@ -97,6 +117,7 @@ MessageEvent = Annotated[
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
+        CallStartedEvent, CallEndedEvent,
     ],
     Field(discriminator="type"),
 ]
@@ -107,6 +128,7 @@ EVENT_MODELS = {
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
+        CallStartedEvent, CallEndedEvent,
     )
 }
 

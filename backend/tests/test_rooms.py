@@ -63,7 +63,7 @@ def test_get_room_as_member_hides_invite_and_limits_permissions(client):
     assert body["my_role"] == "member"
     assert body["invite_code"] is None
     assert body["member_count"] == 2
-    assert sorted(body["permissions"]) == ["chat.send", "task.propose"]
+    assert sorted(body["permissions"]) == ["call.start", "chat.send", "task.propose"]
 
 
 # ---------- 404 for everyone who isn't an active member ----------

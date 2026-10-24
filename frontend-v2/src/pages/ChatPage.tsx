@@ -17,6 +17,8 @@ import { useTimezone } from '../lib/useTimezone'
 import { useRoom } from '../room/roomContext'
 import { isLocal, useChat, type ChatItem, type LocalMessage } from '../room/useChat'
 import { typingLabel, useTyping } from '../room/useTyping'
+import { CallButton } from '../room/CallButton'
+import { CallCardJoin } from '../room/CallCardJoin'
 
 const MAX = 4000
 const GROUP_MS = 5 * 60 * 1000 // consecutive messages from one person within 5 minutes share a header
@@ -260,6 +262,7 @@ function ChatView() {
           </div>
           <div className="sub">Room chat · finished stages, blocks and approvals post here automatically</div>
         </div>
+        <CallButton className="sm chan-call" />
         <Link className="chan-people" to={`/rooms/${room.id}/members`} title="See members">
           <span className="avstack">
             {people.slice(0, 3).map((m) => (
@@ -559,6 +562,9 @@ function SystemLine({ m, at, onReply }: { m: Message; at: string; onReply: () =>
           </>
         ) : (
           body
+        )}
+        {m.event?.type === 'call_started' && typeof m.event.detail?.call_id === 'string' && (
+          <CallCardJoin callId={m.event.detail.call_id} at={m.created_at} />
         )}
         {m.event?.type === 'stage_done' && typeof m.event.detail?.result_url === 'string' && (
           <>

@@ -125,6 +125,25 @@ class AlreadyHead(Conflict):
     code = "ALREADY_HEAD"
 
 
+class CallNotOpen(Conflict):
+    code = "CALL_NOT_OPEN"
+
+
+class CallEnded(Conflict):
+    code = "CALL_ENDED"
+
+
+class CallFull(Conflict):
+    code = "CALL_FULL"
+
+
+class CallProviderUnavailable(AppError):
+    """The video provider didn't answer. Nothing was saved, so trying again is safe."""
+
+    status_code = 503
+    code = "CALL_PROVIDER_UNAVAILABLE"
+
+
 class ValidationFailed(AppError):
     status_code = 422
     code = "VALIDATION_ERROR"

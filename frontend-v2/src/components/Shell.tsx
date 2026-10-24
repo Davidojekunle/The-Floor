@@ -80,7 +80,7 @@ export function Shell() {
     pane.current?.scrollTo(0, 0)
   }, [location.pathname])
 
-  const fill = /\/rooms\/[^/]+\/chat$/.test(location.pathname) // chat fills the pane, like Slack
+  const fill = /\/rooms\/[^/]+\/(chat|calls\/[^/]+)$/.test(location.pathname) // chat and calls fill the pane
 
   return (
     <div className={`shell${mini && !phone ? ' mini' : ''}`}>
@@ -158,8 +158,10 @@ function RoomSwitcher({ room, variant }: { room?: Room; variant: 'side' | 'top' 
                 ? `Temp head until ${formatDay(r.temp_head_expires_at, tz)}`
                 : roleLabel(r.my_role)}
               {r.unread_messages > 0 && ` · ${r.unread_messages} unread`}
+              {r.live_call && ' · call live'}
             </small>
           </span>
+          {r.live_call && <span className="live-dot" aria-hidden="true" />}
           {r.pending_count + r.mine_actionable > 0 && <span className="count">{r.pending_count + r.mine_actionable}</span>}
           {r.id === room?.id && <Icon name="check" />}
         </>

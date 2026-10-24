@@ -1,6 +1,7 @@
 import { apiRequest } from './client'
 import type { TagBrief } from './members'
 import type { Paginated, UserBrief } from './rooms'
+import type { LiveCall } from './calls'
 
 export type StageStatus = 'locked' | 'todo' | 'in_progress' | 'blocked' | 'done'
 export type TaskStatus = 'not_started' | 'in_progress' | 'done'
@@ -57,6 +58,7 @@ export type TaskListItem = {
 
 export type TaskDetail = TaskListItem & {
   room_id: string
+  live_call?: LiveCall | null // a call about this task is live: the page shows Join
   description: string | null
   current_stage_ids: string[]
   created_at: string

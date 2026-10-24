@@ -25,13 +25,17 @@ ALL_PERMISSIONS = (
     "invite.manage",
     "chat.send",
     "chat.delete_any",
+    "call.start",
+    "call.manage_any",  # end any call; edit or cancel any meeting (C2)
+    "meeting.schedule",  # C2
 )
 
-_MEMBER = frozenset({"task.propose", "chat.send"})
+_MEMBER = frozenset({"task.propose", "chat.send", "call.start"})
 
 # Temp head = tasks and chat moderation only. No joins, tags, members, invite, or temp-head management.
 _TEMP_HEAD = _MEMBER | frozenset(
-    {"task.create", "task.approve", "stage.edit", "stage.override_lock", "chat.delete_any"}
+    {"task.create", "task.approve", "stage.edit", "stage.override_lock", "chat.delete_any",
+     "call.manage_any", "meeting.schedule"}
 )
 
 _HEAD = frozenset(ALL_PERMISSIONS)

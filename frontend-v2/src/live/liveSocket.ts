@@ -20,6 +20,7 @@ export type LiveEventType =
   | 'room_access_lost'
   | 'room_access_granted'
   | 'join_request_rejected'
+  | 'call_changed'
 
 export type LiveEvent = {
   type: LiveEventType | (string & {})
@@ -28,6 +29,7 @@ export type LiveEvent = {
   task_id?: string
   stage_id?: string
   message_id?: string
+  call_id?: string // call_changed
   reason?: string // room_access_lost: removed | left | room_deleted
   notification_id?: string // notification_created
   user_id?: string // typing: who

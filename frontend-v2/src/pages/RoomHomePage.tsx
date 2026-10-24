@@ -12,6 +12,7 @@ import { ProposalRow } from '../room/ProposalRow'
 import { useCan, useRoom } from '../room/roomContext'
 import { StageActions } from '../room/StageActions'
 import { useMyStages, type MyStageItem } from '../room/useMyStages'
+import { CallButton } from '../room/CallButton'
 
 type Filter = 'all' | 'mine'
 type Group = 'overdue' | 'week' | 'later' | 'done'
@@ -141,12 +142,15 @@ export function RoomHomePage() {
           <h1>{room.name}</h1>
           <p className="sub">{sub}</p>
         </div>
-        {(canCreate || canPropose) && (
-          <Link className={`btn${canCreate ? ' primary' : ''}`} to={`/rooms/${room.id}/tasks/new`}>
-            <Icon name="plus" />
-            {canCreate ? 'New task' : 'Propose a task'}
-          </Link>
-        )}
+        <div className="head-actions">
+          <CallButton />
+          {(canCreate || canPropose) && (
+            <Link className={`btn${canCreate ? ' primary' : ''}`} to={`/rooms/${room.id}/tasks/new`}>
+              <Icon name="plus" />
+              {canCreate ? 'New task' : 'Propose a task'}
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="home-grid">

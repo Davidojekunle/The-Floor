@@ -235,6 +235,9 @@ def delete_task(db: Session, ctx: RoomContext, task_id: uuid.UUID) -> None:
         raise Forbidden("You can't delete this task.")
     from app.services import progress_service
 
+    from app.services import call_service
+
+    call_service.end_for_task(db, task.id)  # its live call ends first; past calls keep, with the task cleared
     live.task_deleted(db, task)
     progress_service.delete_for_task(db, task.id)
     stage_ids = select(Stage.id).where(Stage.task_id == task.id)

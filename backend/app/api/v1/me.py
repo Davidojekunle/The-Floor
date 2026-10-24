@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.openapi import ME_RESPONSES, MY_TASKS_RESPONSES
 from app.db.session import get_db
 from app.models.user import User
@@ -28,6 +29,7 @@ def build_me(db: Session, user: User) -> MeResponse:
         rooms=room_service.list_rooms_for_user(db, user),
         is_staff=user.is_staff,
         email_verified=account_service.is_verified(user),
+        calls_enabled=get_settings().calls_enabled,
     )
 
 

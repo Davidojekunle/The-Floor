@@ -1507,3 +1507,93 @@ a.row:hover {
   border-radius: var(--r);
   background: var(--attn-soft);
 }
+
+/* ---------- Calls (pages/CallPage.tsx, room/CallButton.tsx) ---------- */
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.live-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent);
+}
+.call-live-btn {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+}
+.chan-call {
+  margin-left: auto;
+}
+.chan-call + .chan-people {
+  margin-left: 8px;
+}
+.call-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.call-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.call-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.call-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.call-frame {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #121212;
+}
+.call-frame[hidden] {
+  display: none;
+}
+.call-frame iframe {
+  position: absolute;
+  inset: 0;
+}
+.call-note {
+  margin: auto;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-3);
+}
+.call-frame .call-note {
+  color: #b8b8b4;
+}
+.call-page > .empty {
+  margin: auto;
+}
+.row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .call-bar .btn.ghost {
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
