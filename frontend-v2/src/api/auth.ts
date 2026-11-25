@@ -32,7 +32,7 @@ export type Me = {
   calls_enabled: boolean // calls are on for me (everyone, or staff while testing); off: no call controls anywhere
   announcement: string | null // staff's site-wide message, shown as a banner
   is_owner?: boolean // can add and remove admins
-  task_assistant?: boolean // can describe tasks in plain words (staff only while we try it)
+  task_assistant?: boolean // can describe tasks in plain words (the admin switch decides who)
 }
 
 export type MeUpdate = { name?: string; timezone?: string; theme?: Theme }

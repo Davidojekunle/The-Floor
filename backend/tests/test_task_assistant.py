@@ -153,3 +153,16 @@ def test_off_without_a_key(client, team, monkeypatch):
 def test_conversation_must_end_with_the_person(client, fake, team):
     body = {"messages": [{"role": "assistant", "text": "hi"}]}
     assert client.post(f"{url(team)}/task-draft", json=body, headers=team.head).status_code == 422
+
+
+def test_admin_switch_decides_who_can_use_it(client, fake, team):
+    patch = lambda mode: client.patch(f"{API}/admin/settings", json={"task_assistant": mode}, headers=team.head)  # noqa: E731
+    assert patch("everyone").status_code == 200
+    assert client.get(f"{API}/me", headers=team.femi).json()["task_assistant"] is True
+    fake.FAKE_REPLIES.append({"kind": "questions", "message": "?"})
+    assert say(client, team, "hi", who=team.femi).status_code == 200  # Femi isn't staff
+    assert patch("off").status_code == 200
+    assert client.get(f"{API}/me", headers=team.head).json()["task_assistant"] is False
+    assert say(client, team, "hi").status_code == 404
+    log = client.get(f"{API}/admin/log", headers=team.head).json()
+    assert log[0]["detail"] == {"key": "task_assistant", "old": "everyone", "new": "off"}

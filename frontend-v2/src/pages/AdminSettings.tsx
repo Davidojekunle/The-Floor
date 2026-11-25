@@ -55,6 +55,17 @@ export function AdminSettings() {
       })
     else save.mutate({ calls: mode })
   }
+  const setAssistant = (mode: SiteSettings['task_assistant']) => {
+    if (mode === s.task_assistant) return
+    if (mode === 'everyone')
+      ask({
+        change: { task_assistant: mode },
+        title: 'Turn on the task assistant for everyone?',
+        body: 'Everyone who can make or propose tasks sees "Describe your task". Each room gets 5 descriptions a week, about $0.0005 each from your Anthropic credit.',
+        label: 'Turn on for everyone',
+      })
+    else save.mutate({ task_assistant: mode })
+  }
   const toggle = (key: 'signups_open' | 'notification_emails' | 'daily_digest' | 'push', on: boolean, off: Omit<Pending, 'change'>) =>
     on ? save.mutate({ [key]: true }) : ask({ change: { [key]: false }, ...off })
   const announcement = draft ?? s.announcement ?? ''
@@ -76,6 +87,24 @@ export function AdminSettings() {
             {CALLS.map((c) => (
               <button key={c.value} type="button" role="radio" aria-checked={s.calls === c.value}
                 disabled={save.isPending || (!s.calls_ready && c.value !== 'off')} onClick={() => setCalls(c.value)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="admin-switch-row">
+          <div>
+            <strong>Task assistant</strong>
+            <div className="faint small">
+              {s.task_assistant_ready
+                ? '"Describe your task" on the New task page. Each room gets 5 descriptions a week.'
+                : "Not set up yet: add ANTHROPIC_API_KEY in Render."}
+            </div>
+          </div>
+          <div className="seg" role="radiogroup" aria-label="Task assistant">
+            {CALLS.map((c) => (
+              <button key={c.value} type="button" role="radio" aria-checked={s.task_assistant === c.value}
+                disabled={save.isPending || (!s.task_assistant_ready && c.value !== 'off')} onClick={() => setAssistant(c.value)}>
                 {c.label}
               </button>
             ))}

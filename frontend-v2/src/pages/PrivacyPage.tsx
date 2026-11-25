@@ -13,7 +13,7 @@ export function PrivacyPage() {
       </header>
       <main className="legal-body">
         <h1>Privacy</h1>
-        <p className="faint">Last updated 21 October 2026</p>
+        <p className="faint">Last updated 25 November 2026</p>
 
         <p className="legal-lead">
           The Floor keeps only what it needs to run your rooms. It doesn't sell your data, show ads, or track you around

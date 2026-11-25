@@ -99,7 +99,7 @@ class MeResponse(UserOut):
     calls_enabled: bool = Field(False, description="Calls are on for this person (everyone, or staff while testing).")
     announcement: str | None = Field(None, description="Staff's site-wide message, shown as a banner")
     is_owner: bool = Field(False, description="The owner: can make and remove admins")
-    task_assistant: bool = Field(False, description="Can describe tasks in plain words (staff only while we try it)")
+    task_assistant: bool = Field(False, description="Can describe tasks in plain words (the admin switch decides who)")
 
 
 class UpdateMeRequest(BaseModel):

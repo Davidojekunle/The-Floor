@@ -5,7 +5,7 @@ It never creates anything. It returns a draft that the person confirms, then the
 filled in, and they press Create there. Every id in a draft is checked against the room before it is sent
 back, so a wrong guess from the model becomes an empty owner in the form, never someone else's stage.
 
-Limits: staff only while we try it, `assistant_weekly_limit` new descriptions per room per 7 days, and
+Limits: the admin switch (off, staff only, everyone; staff only by default), `assistant_weekly_limit` new descriptions per room per 7 days, and
 `assistant_max_turns` questions-and-answers per description. Nothing anyone typed is stored; the table
 only counts conversations.
 """
@@ -54,14 +54,24 @@ def ready() -> bool:
     return s.assistant_provider == "fake" or bool(s.anthropic_api_key)
 
 
-def enabled_for(user: User) -> bool:
-    """Staff only for now (shown in /me as task_assistant)."""
-    return bool(user.is_staff) and ready()
+def enabled_for(db: Session, user: User) -> bool:
+    """The admin switch decides: off, staff only, or everyone (shown in /me as task_assistant)."""
+    from app.services import site_service
+
+    mode = site_service.get(db).get("task_assistant", "staff")
+    return ready() and (mode == "everyone" or (mode == "staff" and bool(user.is_staff)))
 
 
-def _check_access(ctx: RoomContext, user: User) -> None:
-    if not user.is_staff:
-        raise NotFound("Not found.")  # like the admin routes: don't advertise it yet
+def _allowed(db: Session, user: User) -> bool:
+    from app.services import site_service
+
+    mode = site_service.get(db).get("task_assistant", "staff")
+    return mode == "everyone" or (mode == "staff" and bool(user.is_staff))
+
+
+def _check_access(db: Session, ctx: RoomContext, user: User) -> None:
+    if not _allowed(db, user):
+        raise NotFound("Not found.")  # switched off for them: don't advertise it
     if not (can(ctx, "task.create") or can(ctx, "task.propose")):
         raise NotFound("Not found.")
     if not ready():
@@ -77,7 +87,7 @@ def _used(db: Session, room_id: uuid.UUID, now: datetime) -> int:
 
 
 def status(db: Session, ctx: RoomContext, user: User) -> dict:
-    if not user.is_staff:
+    if not _allowed(db, user):
         raise NotFound("Not found.")
     limit = get_settings().assistant_weekly_limit
     return {"ready": ready(), "limit": limit, "uses_left": max(0, limit - _used(db, ctx.room.id, utcnow()))}
@@ -277,7 +287,7 @@ def _clean_draft(raw: dict, people, tags, today: date) -> dict | None:
 # ---- the endpoint's work ----
 
 def reply(db: Session, ctx: RoomContext, user: User, conversation_id: uuid.UUID | None, messages: list[dict]) -> dict:
-    _check_access(ctx, user)
+    _check_access(db, ctx, user)
     s = get_settings()
     now = utcnow()
     limiter.hit(f"assistant:{user.id}", 40, HOUR)

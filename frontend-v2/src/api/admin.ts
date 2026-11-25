@@ -68,6 +68,8 @@ export type SiteSettings = {
   daily_digest: boolean
   push: boolean
   announcement: string | null
+  task_assistant: 'off' | 'staff' | 'everyone' // who can "Describe your task"
+  task_assistant_ready: boolean // ANTHROPIC_API_KEY is set on the server
 }
 
 export const getSiteSettings = () => apiRequest<SiteSettings>('/admin/settings')

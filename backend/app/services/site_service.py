@@ -17,6 +17,7 @@ DEFAULTS: dict = {
     "daily_digest": True,
     "push": True,
     "announcement": None,  # text shown to everyone signed in, or None
+    "task_assistant": "staff",  # off | staff | everyone: who can "Describe your task"
 }
 _CACHE = "site_settings"
 

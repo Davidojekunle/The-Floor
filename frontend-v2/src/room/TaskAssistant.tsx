@@ -32,7 +32,7 @@ export function draftToForm(d: DraftTaskOut): DraftTask {
 /**
  * "Describe your task": type it like you'd say it in the group chat (or paste the message). The assistant
  * asks when something's unclear, then shows what it understood; only after "Yes, fill it in" does the form
- * below change. Staff only for now, 5 new descriptions per room per week.
+ * below change. The admin switch decides who has it; 5 new descriptions per room per week.
  */
 export function TaskAssistant({ onConfirm }: { onConfirm: (d: DraftTask) => void }) {
   const { room } = useRoom()

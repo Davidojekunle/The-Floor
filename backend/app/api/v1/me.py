@@ -33,7 +33,7 @@ def build_me(db: Session, user: User) -> MeResponse:
         calls_enabled=site_service.calls_for(db, user),
         announcement=site_service.get(db)["announcement"],
         is_owner=admin_people.is_owner(user),
-        task_assistant=task_assistant.enabled_for(user),
+        task_assistant=task_assistant.enabled_for(db, user),
     )
 
 

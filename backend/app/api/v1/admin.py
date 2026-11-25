@@ -28,7 +28,10 @@ STAFF_ONLY = {401: err("Missing, invalid, or expired token."), 404: err("Not sta
 
 
 def _settings(db: Session) -> SiteSettings:
-    return SiteSettings(**{**site_service.get(db), "calls_ready": site_service.calls_ready()})
+    from app.services import task_assistant
+
+    return SiteSettings(**{**site_service.get(db), "calls_ready": site_service.calls_ready(),
+                           "task_assistant_ready": task_assistant.ready()})
 
 
 @router.get("/settings", response_model=SiteSettings, responses=STAFF_ONLY)
