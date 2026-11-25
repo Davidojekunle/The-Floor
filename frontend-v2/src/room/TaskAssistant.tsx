@@ -92,7 +92,7 @@ export function TaskAssistant({ onConfirm }: { onConfirm: (d: DraftTask) => void
   const outOfTurns = reply && reply.turns_left === 0 && reply.kind === 'questions'
 
   return (
-    <section className="form-card assistant" aria-labelledby="assistant-h">
+    <section className={`form-card assistant${busy ? ' thinking' : ''}`} aria-labelledby="assistant-h" aria-busy={busy}>
       <div className="assistant-head">
         <div>
           <h2 id="assistant-h">Describe your task</h2>
