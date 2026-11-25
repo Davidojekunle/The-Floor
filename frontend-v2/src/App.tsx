@@ -17,6 +17,8 @@ const CancelEmailChangePage = lazy(() => import('./pages/EmailPages').then((m) =
 const ConfirmEmailPage = lazy(() => import('./pages/EmailPages').then((m) => ({ default: m.ConfirmEmailPage })))
 const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
+const MessagesPage = lazy(() => import('./pages/MessagesPage').then((m) => ({ default: m.MessagesPage })))
+const DmThreadPage = lazy(() => import('./pages/DmThreadPage').then((m) => ({ default: m.DmThreadPage })))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
 const CalendarPage = lazy(() => import('./pages/CalendarPage').then((m) => ({ default: m.CalendarPage })))
 const CallsPage = lazy(() => import('./pages/CallsPage').then((m) => ({ default: m.CallsPage })))
@@ -61,6 +63,8 @@ export default function App() {
         <Route path="/account" element={page(<AccountPage />)} />
         <Route path="/admin" element={page(<AdminPage />)} />
         <Route path="/notifications" element={page(<NotificationsPage />)} />
+        <Route path="/messages" element={page(<MessagesPage />)} />
+        <Route path="/messages/:threadId" element={page(<DmThreadPage />)} />
 
         <Route path="/rooms/:roomId" element={<RoomProvider />}>
           <Route index element={page(<RoomHomePage />)} />

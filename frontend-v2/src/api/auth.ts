@@ -32,6 +32,8 @@ export type Me = {
   calls_enabled: boolean // calls are on for me (everyone, or staff while testing); off: no call controls anywhere
   announcement: string | null // staff's site-wide message, shown as a banner
   is_owner?: boolean // can add and remove admins
+  direct_messages?: boolean // has private DMs (the admin switch decides who)
+  unread_dms?: number // unread private messages, all conversations
   task_assistant?: boolean // can describe tasks in plain words (the admin switch decides who)
 }
 

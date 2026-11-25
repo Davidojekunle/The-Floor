@@ -109,6 +109,12 @@ def account_changed(db, user_id):
     _queue(db, {"type": "account_changed", "room_id": None}, {user_id})
 
 
+def dm_event(db, kind: str, thread_id, user_ids: set, **ids):
+    """dm_created, dm_deleted, dm_read, dm_changed (a block): only the two people in the conversation."""
+    _queue(db, {"type": kind, "room_id": None, "thread_id": str(thread_id), **{k: str(v) for k, v in ids.items()}},
+           set(user_ids))
+
+
 def close_sockets(db: Session, user_id) -> None:
     """After the commit, close all of this user's sockets with 4401."""
     db.info.setdefault(_CLOSE, set()).add(user_id)

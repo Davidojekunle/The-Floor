@@ -98,6 +98,8 @@ class MeResponse(UserOut):
     email_verified: bool = Field(False, description="Clicked the link we emailed. Until then the app asks them to.")
     calls_enabled: bool = Field(False, description="Calls are on for this person (everyone, or staff while testing).")
     announcement: str | None = Field(None, description="Staff's site-wide message, shown as a banner")
+    direct_messages: bool = Field(False, description="Has private DMs (the admin switch decides who)")
+    unread_dms: int = Field(0, description="Unread DMs across all conversations")
     is_owner: bool = Field(False, description="The owner: can make and remove admins")
     task_assistant: bool = Field(False, description="Can describe tasks in plain words (the admin switch decides who)")
 

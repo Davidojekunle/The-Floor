@@ -125,6 +125,14 @@ export function LiveProvider({ children }: { children: ReactNode }) {
             () => {},
           )
           break
+        case 'dm_created': // a private message, from you or to you: the list and the badge
+        case 'dm_deleted':
+        case 'dm_read': // you read it in another tab
+        case 'dm_changed': // a block or unblock
+          inv(['dms'])
+          inv(['dm', e.thread_id])
+          meSoon()
+          break
         case 'notification_created': // a new bell item: refresh the list and the badge right away
           inv(['notifications'])
           refreshUser().catch(() => {})

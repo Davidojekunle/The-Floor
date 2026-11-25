@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
+import { startDm } from '../api/dms'
 import {
   createTag,
   deleteTag,
@@ -53,6 +54,15 @@ export function MembersPage() {
   const toast = useToast()
   const onError = useRoomError()
   const [tab, setTab] = useState<'people' | 'tags'>('people')
+  const navigate = useNavigate()
+  async function messageThem(userId: string) {
+    try {
+      const t = await startDm(userId)
+      navigate(`/messages/${t.id}`)
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : "Couldn't open the conversation. Try again.")
+    }
+  }
   const [open, setOpen] = useState<Open>(null)
 
   const members = useQuery({ queryKey: ['members', room.id], queryFn: () => listMembers(room.id) })
@@ -178,6 +188,11 @@ export function MembersPage() {
                         {m.role === 'member' && m.tags.length === 0 && <span className="faint">No tags</span>}
                       </div>
                     </div>
+                    {user?.direct_messages && m.user.id !== user.id && (
+                      <button type="button" className="btn sm ghost" onClick={() => void messageThem(m.user.id)}>
+                        Message
+                      </button>
+                    )}
                     {items.length > 0 && <Menu label={`Actions for ${m.user.name}`} items={items} />}
                   </div>
                 )

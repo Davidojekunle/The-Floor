@@ -2,6 +2,7 @@
 from app.models.admin_event import AdminEvent  # noqa: F401
 from app.models.assistant import AssistantConversation  # noqa: F401
 from app.models.calendar import CalendarFeed  # noqa: F401
+from app.models.direct import DirectMessage, DirectThread, UserBlock  # noqa: F401
 from app.models.call import Call, CallInvite, CallParticipant, CallRsvp  # noqa: F401
 from app.models.email import EmailChangeToken, OutboxEmail, PasswordResetToken  # noqa: F401
 from app.models.message import Message  # noqa: F401

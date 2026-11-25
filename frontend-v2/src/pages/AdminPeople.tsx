@@ -16,13 +16,14 @@ const SWITCHES: Record<string, string> = {
   push: 'Push notifications',
   announcement: 'Announcement',
   task_assistant: 'Task assistant',
+  direct_messages: 'Private messages',
 }
 
 function show(key: string | undefined, v: unknown): string {
   if (v === true) return 'on'
   if (v === false) return 'off'
   if (v === null || v === undefined || v === '') return key === 'announcement' ? 'none' : 'unset'
-  if (key === 'calls' || key === 'task_assistant') return v === 'staff' ? 'staff only' : String(v)
+  if (key === 'calls' || key === 'task_assistant' || key === 'direct_messages') return v === 'staff' ? 'staff only' : String(v)
   return key === 'announcement' ? `"${String(v)}"` : String(v)
 }
 

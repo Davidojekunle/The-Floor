@@ -130,6 +130,7 @@ class SiteSettings(BaseModel):
     push: bool = Field(description="Pop-up notifications on devices")
     announcement: str | None = Field(None, description="A banner shown to everyone signed in")
     task_assistant: Literal["off", "staff", "everyone"] = Field("staff", description="Who can describe tasks in plain words")
+    direct_messages: Literal["off", "staff", "everyone"] = Field("staff", description="Who has private DMs")
     task_assistant_ready: bool = Field(False, description="ANTHROPIC_API_KEY is set; it can't be switched on without it")
 
 
@@ -143,6 +144,7 @@ class SiteSettingsUpdate(BaseModel):
     push: bool | None = None
     announcement: str | None = Field(None, max_length=300, description="Empty clears it")
     task_assistant: Literal["off", "staff", "everyone"] | None = None
+    direct_messages: Literal["off", "staff", "everyone"] | None = None
 
     @field_validator("announcement")
     @classmethod

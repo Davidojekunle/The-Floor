@@ -18,6 +18,7 @@ DEFAULTS: dict = {
     "push": True,
     "announcement": None,  # text shown to everyone signed in, or None
     "task_assistant": "staff",  # off | staff | everyone: who can "Describe your task"
+    "direct_messages": "staff",  # off | staff | everyone: who has private DMs
 }
 _CACHE = "site_settings"
 

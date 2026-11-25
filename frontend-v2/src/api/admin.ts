@@ -70,6 +70,7 @@ export type SiteSettings = {
   announcement: string | null
   task_assistant: 'off' | 'staff' | 'everyone' // who can "Describe your task"
   task_assistant_ready: boolean // ANTHROPIC_API_KEY is set on the server
+  direct_messages: 'off' | 'staff' | 'everyone' // who has private DMs
 }
 
 export const getSiteSettings = () => apiRequest<SiteSettings>('/admin/settings')

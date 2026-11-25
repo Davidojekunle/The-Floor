@@ -13,7 +13,7 @@ from app.schemas.auth import MeResponse, UpdateMeRequest
 from app.schemas.call import CallPage
 from app.schemas.common import PageParams, UtcDateTime, page_params_tasks
 from app.schemas.task import MyTaskPage
-from app.services import account_service, my_task_service, notification_service, room_service, site_service, task_assistant, admin_people
+from app.services import account_service, my_task_service, notification_service, room_service, site_service, task_assistant, admin_people, dm_service
 
 router = APIRouter()
 
@@ -32,6 +32,8 @@ def build_me(db: Session, user: User) -> MeResponse:
         email_verified=account_service.is_verified(user),
         calls_enabled=site_service.calls_for(db, user),
         announcement=site_service.get(db)["announcement"],
+        direct_messages=dm_service.enabled_for(db, user),
+        unread_dms=dm_service.unread_total(db, user),
         is_owner=admin_people.is_owner(user),
         task_assistant=task_assistant.enabled_for(db, user),
     )

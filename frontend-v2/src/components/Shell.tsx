@@ -110,6 +110,8 @@ function useNav(room?: Room, summary?: RoomSummary) {
   return {
     forYou,
     notifications: user?.unread_notifications ?? 0,
+    dms: user?.unread_dms ?? 0,
+    showDms: !!user?.direct_messages,
     base,
     unread: summary?.unread_messages ?? 0,
     pending: summary?.pending_count ?? 0,
@@ -315,6 +317,10 @@ function Sidebar(props: { room?: Room; summary?: RoomSummary; mini: boolean; onT
           <Count n={nav.notifications} kind="msg" />
           {nav.notifications > 0 && <span className="mini-dot is-msg" />}
         </>)}
+        {nav.showDms && item('/messages', 'chat', 'Messages', <>
+          <Count n={nav.dms} kind="msg" />
+          {nav.dms > 0 && <span className="mini-dot is-msg" />}
+        </>)}
         {room && (
           <>
             <div className="side-rule" />
@@ -365,9 +371,22 @@ function PhoneTop({ room }: { room?: Room }) {
     <header className="ptop">
       <RoomSwitcher room={room} variant="top" />
       <span className="spacer" />
+      <DmLink />
       <BellLink />
       <AccountMenu variant="top" />
     </header>
+  )
+}
+
+function DmLink() {
+  const { user } = useAuth()
+  if (!user?.direct_messages) return null
+  const n = user.unread_dms ?? 0
+  return (
+    <NavLink to="/messages" className="icon-btn ptop-bell" aria-label={n ? `Messages, ${n} unread` : 'Messages'}>
+      <Icon name="chat" size={22} />
+      {n > 0 && <span className="tab-badge is-msg">{n > 99 ? '99+' : n}</span>}
+    </NavLink>
   )
 }
 

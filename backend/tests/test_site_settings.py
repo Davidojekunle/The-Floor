@@ -36,7 +36,7 @@ def test_only_staff_see_or_change_settings(client, db):
     staff(db, "head@example.com")
     s = client.get(f"{API}/admin/settings", headers=team.head).json()
     assert s == {"calls": "off", "calls_ready": False, "signups_open": True, "notification_emails": True,
-                 "daily_digest": True, "push": True, "announcement": None, "task_assistant": "staff",
+                 "daily_digest": True, "push": True, "announcement": None, "task_assistant": "staff", "direct_messages": "staff",
                  "task_assistant_ready": False}
 
 

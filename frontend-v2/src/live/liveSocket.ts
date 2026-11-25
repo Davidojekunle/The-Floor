@@ -30,6 +30,7 @@ export type LiveEvent = {
   stage_id?: string
   message_id?: string
   call_id?: string // call_changed
+  thread_id?: string // dm_created, dm_deleted, dm_read, dm_changed
   reason?: string // room_access_lost: removed | left | room_deleted
   notification_id?: string // notification_created
   user_id?: string // typing: who

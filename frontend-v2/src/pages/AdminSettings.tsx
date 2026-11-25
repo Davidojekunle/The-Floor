@@ -66,6 +66,17 @@ export function AdminSettings() {
       })
     else save.mutate({ task_assistant: mode })
   }
+  const setDms = (mode: SiteSettings['direct_messages']) => {
+    if (mode === s.direct_messages) return
+    if (mode === 'everyone')
+      ask({
+        change: { direct_messages: mode },
+        title: 'Turn on private messages for everyone?',
+        body: 'Everyone gets Messages and can message people they share a room with. Anyone can block someone to stop their messages.',
+        label: 'Turn on for everyone',
+      })
+    else save.mutate({ direct_messages: mode })
+  }
   const toggle = (key: 'signups_open' | 'notification_emails' | 'daily_digest' | 'push', on: boolean, off: Omit<Pending, 'change'>) =>
     on ? save.mutate({ [key]: true }) : ask({ change: { [key]: false }, ...off })
   const announcement = draft ?? s.announcement ?? ''
@@ -105,6 +116,22 @@ export function AdminSettings() {
             {CALLS.map((c) => (
               <button key={c.value} type="button" role="radio" aria-checked={s.task_assistant === c.value}
                 disabled={save.isPending || (!s.task_assistant_ready && c.value !== 'off')} onClick={() => setAssistant(c.value)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="admin-switch-row">
+          <div>
+            <strong>Private messages</strong>
+            <div className="faint small">
+              People can message someone they share a room with. With Staff only, both people must be admins.
+            </div>
+          </div>
+          <div className="seg" role="radiogroup" aria-label="Private messages">
+            {CALLS.map((c) => (
+              <button key={c.value} type="button" role="radio" aria-checked={s.direct_messages === c.value}
+                disabled={save.isPending} onClick={() => setDms(c.value)}>
                 {c.label}
               </button>
             ))}
