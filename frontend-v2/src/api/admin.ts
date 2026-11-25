@@ -21,7 +21,17 @@ export type AdminStats = {
     push_expired_since_start: number
   }
   people: { total: number; new_7d: number; new_30d: number; active_7d: number; active_30d: number; with_push: number; with_calendar: number }
-  rooms: { total: number; new_30d: number; active_30d: number; average_members: number; pending_join_requests: number }
+  rooms: {
+    total: number
+    new_30d: number
+    active_30d: number
+    average_members: number
+    pending_join_requests: number
+    with_3_members: number
+    real: number // 3+ active members and a stage done: the growth goal
+  }
+  /** Sign-ups and rooms by the ?ref= word people came with ("direct" without one), busiest first. */
+  sources: { source: string; people: number; people_7d: number; rooms_started: number; real_rooms: number }[]
   work: {
     tasks_total: number
     tasks_open: number
@@ -68,3 +78,21 @@ export const updateSiteSettings = (change: Partial<SiteSettings>) =>
 /** For any visitor: whether sign-ups are open, and staff's announcement. */
 export const getSite = () =>
   apiRequest<{ signups_open: boolean; announcement: string | null }>('/site', { auth: false })
+
+/** Everyone who can open /admin. Only the owner (Me.is_owner) can add or remove them. */
+export type AdminPerson = { id: string; name: string; email: string; is_owner: boolean }
+
+export const listAdmins = () => apiRequest<AdminPerson[]>('/admin/admins')
+export const addAdmin = (email: string) => apiRequest<AdminPerson[]>('/admin/admins', { method: 'POST', body: { email } })
+export const removeAdmin = (userId: string) => apiRequest<AdminPerson[]>(`/admin/admins/${userId}`, { method: 'DELETE' })
+
+/** The change log: switches turned on or off, admins added or removed. Newest first, last 50. */
+export type AdminEvent = {
+  id: string
+  created_at: string
+  actor_name: string
+  action: 'setting_changed' | 'admin_added' | 'admin_removed'
+  detail: { key?: string; old?: unknown; new?: unknown; name?: string; email?: string }
+}
+
+export const getAdminLog = () => apiRequest<AdminEvent[]>('/admin/log')

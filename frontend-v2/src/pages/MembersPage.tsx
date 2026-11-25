@@ -27,6 +27,7 @@ import { useCan, useRoom } from '../room/roomContext'
 import { TransferHeadDialog } from '../room/RoomLifecycle'
 import { TempHeadDialog } from '../room/TempHeadDialog'
 import { useRoomError } from '../room/useRoomError'
+import { RoomBack } from '../room/RoomBack'
 
 type Open =
   | { kind: 'tags'; member: Member }
@@ -113,6 +114,7 @@ export function MembersPage() {
 
   return (
     <div className="page">
+      <RoomBack />
       <div className="page-head">
         <div>
           <h1>Members</h1>

@@ -106,3 +106,43 @@ def test_staff_script(db, team, monkeypatch, capsys):
     db.expire_all()
     assert not db.scalar(select(User.is_staff).where(User.email == "femi@example.com"))
     assert staff_cli.main([]) == 2
+
+
+def test_signups_and_rooms_by_source(client, db):
+    """?ref= links: the word is tidied, saved on the account, and counted with the rooms those people start."""
+    from tests.conftest import create_room, login
+
+    for email, source in (("head@example.com", "LinkedIn!"), ("x1@example.com", "x"), ("plain@example.com", None)):
+        body = {"name": "Someone", "email": email, "password": "password123", "timezone": "Africa/Lagos"}
+        if source:
+            body["source"] = source
+        assert client.post(f"{API}/auth/register", json=body).status_code == 201
+    assert db.scalar(select(User.signup_source).where(User.email == "head@example.com")) == "linkedin"
+    assert db.scalar(select(User.signup_source).where(User.email == "plain@example.com")) is None
+
+    make_staff(db)
+    head = {"Authorization": f"Bearer {login(client, email='head@example.com').json()['access_token']}"}
+    create_room(client, head)
+
+    s = client.get(f"{API}/admin/stats", headers=head).json()
+    by = {r["source"]: r for r in s["sources"]}
+    assert by["linkedin"]["people"] == 1 and by["linkedin"]["people_7d"] == 1 and by["linkedin"]["rooms_started"] == 1
+    assert by["linkedin"]["real_rooms"] == 0  # one member, nothing done yet
+    assert by["x"]["people"] == 1 and by["x"]["rooms_started"] == 0
+    assert by["direct"]["people"] == 1
+    assert s["rooms"]["real"] == 0
+
+
+def test_real_room_needs_three_members_and_a_stage_done(client, db, team):
+    make_staff(db)
+    rooms = client.get(f"{API}/admin/stats", headers=team.head).json()["rooms"]
+    assert rooms["with_3_members"] == 1 and rooms["real"] == 0
+    task = create_task(client, team)
+    assert put_status(client, team, task, task["stages"][0], "done", team.femi).status_code == 200
+    assert client.get(f"{API}/admin/stats", headers=team.head).json()["rooms"]["real"] == 1
+
+
+def test_bad_source_never_blocks_sign_up(client, db):
+    body = {"name": "A", "email": "odd@example.com", "password": "password123", "source": "%%%" + "z" * 300}
+    assert client.post(f"{API}/auth/register", json=body).status_code == 201
+    assert db.scalar(select(User.signup_source).where(User.email == "odd@example.com")) is None

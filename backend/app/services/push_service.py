@@ -124,7 +124,7 @@ def forget_all(db: Session, user_id) -> None:
 
 # ================================================================== sending
 
-def queue(db: Session, user_id, *, title: str, body: str | None, url: str, tag: str) -> None:
+def queue(db: Session, user_id, *, title: str, body: str | None, url: str, tag: str, actions: list | None = None) -> None:
     if not get_settings().push_enabled:
         return
     from app.services import site_service
@@ -133,7 +133,7 @@ def queue(db: Session, user_id, *, title: str, body: str | None, url: str, tag: 
         return  # staff paused push for the whole site
     if not db.scalar(select(exists().where(PushSubscription.user_id == user_id))):
         return  # no browser registered: don't wake the pool
-    db.info.setdefault(_PENDING, []).append((user_id, {"title": title, "body": body, "url": url, "tag": tag}))
+    db.info.setdefault(_PENDING, []).append((user_id, {"title": title, "body": body, "url": url, "tag": tag, **({"actions": actions} if actions else {})}))
 
 
 @event.listens_for(Session, "after_commit")

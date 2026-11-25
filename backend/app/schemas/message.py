@@ -105,6 +105,16 @@ class MeetingCancelledEvent(_Event):
     detail: MeetingDetail
 
 
+class RoomRenamedDetail(BaseModel):
+    old: str
+    new: str
+
+
+class RoomRenamedEvent(_Event):
+    type: Literal["room_renamed"]
+    detail: RoomRenamedDetail
+
+
 class TaskCompletedEvent(_Event):
     type: Literal["task_completed"]
     detail: None = None
@@ -135,7 +145,7 @@ MessageEvent = Annotated[
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
-        CallStartedEvent, CallEndedEvent, MeetingScheduledEvent, MeetingCancelledEvent,
+        CallStartedEvent, CallEndedEvent, MeetingScheduledEvent, MeetingCancelledEvent, RoomRenamedEvent,
     ],
     Field(discriminator="type"),
 ]
@@ -146,7 +156,7 @@ EVENT_MODELS = {
         MemberLeftEvent, HeadTransferredEvent,
         MemberJoinedEvent, TaskCreatedEvent, TaskApprovedEvent, StageDoneEvent, StageBlockedEvent,
         StageReopenedEvent, StageUnlockedEvent, TaskCompletedEvent, TempHeadGrantedEvent, TempHeadRevokedEvent,
-        CallStartedEvent, CallEndedEvent, MeetingScheduledEvent, MeetingCancelledEvent,
+        CallStartedEvent, CallEndedEvent, MeetingScheduledEvent, MeetingCancelledEvent, RoomRenamedEvent,
     )
 }
 

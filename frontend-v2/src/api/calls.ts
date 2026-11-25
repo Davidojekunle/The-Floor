@@ -27,7 +27,10 @@ export type Call = {
   external_url: string | null // a pasted Meet or Zoom link
   can_end: boolean // starter, head or temp head: may press End for everyone
   can_edit: boolean // a scheduled meeting this person may change or cancel
+  rsvp: Rsvp | null // meetings: who's going, who can't, and my answer
 }
+
+export type Rsvp = { going: UserBrief[]; declined: UserBrief[]; mine: 'going' | 'declined' | null; invited: boolean }
 
 export type MeetingInvite = { everyone: boolean; users: UserBrief[]; tags: { id: string; name: string }[] }
 
@@ -84,6 +87,10 @@ export const checkClashes = (
   roomId: string,
   body: { starts_at: string; duration_minutes: number; invite: InviteIn; exclude_call_id?: string },
 ) => apiRequest<{ clashes: Clash[] }>(`/rooms/${roomId}/meetings/check`, { method: 'POST', body })
+
+/** Going, can't make it, or null to take the answer back. Invitees only. */
+export const answerMeeting = (roomId: string, callId: string, response: 'going' | 'declined' | null) =>
+  apiRequest<Call>(`/rooms/${roomId}/meetings/${callId}/rsvp`, { method: 'PUT', body: { response } })
 
 export const endCall = (roomId: string, callId: string) =>
   apiRequest<void>(`/rooms/${roomId}/calls/${callId}/end`, { method: 'POST' })

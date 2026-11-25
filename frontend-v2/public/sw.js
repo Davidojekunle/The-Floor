@@ -23,6 +23,7 @@ self.addEventListener('push', (event) => {
         icon: '/icon-192.png',
         badge: '/badge-72.png',
         data: { url: data.url || '/notifications', id: data.tag && !data.tag.startsWith('chat:') ? data.tag : undefined },
+        actions: Array.isArray(data.actions) ? data.actions.slice(0, 2) : [], // "Join" on a call that just started
       })
     })(),
   )
@@ -30,7 +31,10 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const { url = '/notifications', id } = event.notification.data || {}
+  const data = event.notification.data || {}
+  const id = data.id
+  // "Join" goes straight into the call; tapping the notice itself opens the call page as usual
+  const url = event.action === 'join' ? `${data.url || '/notifications'}?join=1` : data.url || '/notifications'
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })

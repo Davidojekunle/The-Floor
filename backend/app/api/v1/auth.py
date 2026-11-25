@@ -64,7 +64,7 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
     if not site_service.signups_open(db) and not room_service.has_open_invite(db, body.email):
         raise Forbidden("New sign-ups are closed for now. If a room invited you by email, use that address.")
     user = auth_service.register_user(
-        db, name=body.name, email=body.email, password=body.password, timezone=body.timezone
+        db, name=body.name, email=body.email, password=body.password, timezone=body.timezone, source=body.source
     )
     account_service.send_verification(db, user, email_service.link_base(request))
     db.commit()

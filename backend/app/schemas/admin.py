@@ -1,3 +1,4 @@
+import uuid
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -39,6 +40,16 @@ class AdminRooms(BaseModel):
     active_30d: int  # a task made or a chat message sent in the last 30 days
     average_members: float
     pending_join_requests: int
+    with_3_members: int = Field(0, description="Rooms with 3 or more active members")
+    real: int = Field(0, description="Rooms with 3+ active members and at least one stage done: the growth goal")
+
+
+class AdminSource(BaseModel):
+    source: str = Field(description='The ?ref= word, or "direct" when they came without one')
+    people: int
+    people_7d: int
+    rooms_started: int = Field(description="Rooms made by people who came this way")
+    real_rooms: int = Field(description="Of those, rooms with 3+ active members and a stage done")
 
 
 class AdminWork(BaseModel):
@@ -78,6 +89,7 @@ class AdminStats(BaseModel):
     activity: AdminActivity
     calls: "AdminCalls"
     weeks: list[AdminWeek]
+    sources: list[AdminSource] = []
 
 
 class AdminCalls(BaseModel):
@@ -88,6 +100,25 @@ class AdminCalls(BaseModel):
     calls_this_month: int
     live_now: int
     meetings_upcoming: int
+
+
+class AdminPerson(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str
+    is_owner: bool
+
+
+class AdminAdd(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+
+
+class AdminEventOut(BaseModel):
+    id: uuid.UUID
+    created_at: UtcDateTime
+    actor_name: str
+    action: Literal["setting_changed", "admin_added", "admin_removed"]
+    detail: dict
 
 
 class SiteSettings(BaseModel):

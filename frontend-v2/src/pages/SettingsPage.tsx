@@ -10,6 +10,8 @@ import { DeleteRoomDialog, LeaveRoomDialog, TransferHeadDialog } from '../room/R
 import { Switch } from '../components/Switch'
 import { useNotificationSettings } from '../room/useNotificationSettings'
 import { useRoomError } from '../room/useRoomError'
+import { RenameRoom } from '../room/RenameRoom'
+import { RoomBack } from '../room/RoomBack'
 
 export function SettingsPage() {
   const { room, refreshRoom } = useRoom()
@@ -52,12 +54,15 @@ export function SettingsPage() {
 
   return (
     <div className="page">
+      <RoomBack />
       <div className="page-head">
         <div>
           <h1>Settings</h1>
           <p className="sub">{room.name}</p>
         </div>
       </div>
+
+      <RenameRoom />
 
       {canInvite && room.invite_code && (
       <>

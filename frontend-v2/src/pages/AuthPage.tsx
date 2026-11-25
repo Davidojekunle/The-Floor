@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getSite } from '../api/admin'
 import { Logo } from '../components/Logo'
 import { PasswordInput } from '../components/PasswordInput'
+import { getRef } from '../lib/ref'
 
 type Mode = 'login' | 'register'
 
@@ -48,6 +49,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
           email,
           password,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          source: getRef(),
         })
       } else {
         await login(email, password)

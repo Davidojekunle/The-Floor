@@ -26,3 +26,5 @@ class User(Base):
     # set when they click the link we emailed (or prove the inbox another way: a password reset, an email change)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_staff: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # where they first came from, from a ?ref= link (e.g. "linkedin", "x"). One word, no tracking cookies.
+    signup_source: Mapped[str | None] = mapped_column(String(32), nullable=True)

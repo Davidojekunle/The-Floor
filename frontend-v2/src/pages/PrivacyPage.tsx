@@ -71,12 +71,17 @@ export function PrivacyPage() {
             <strong>YouTube, Google Drive, Canva and similar sites</strong> load a result's preview only when you press
             play or preview on it.
           </li>
+          <li>
+            <strong>Anthropic (Claude)</strong> reads a task description when you use "Describe your task", together with
+            the names of the people and tags in that room, to draft the stages. We don't keep what you typed.
+          </li>
         </ul>
 
         <h2>Cookies and browser storage</h2>
         <p>
           One cookie keeps you signed in. Your browser also remembers a few settings, such as your theme and the last room
-          you opened. There are no analytics or advertising cookies.
+          you opened. If you arrived from a link like thefloorapp.me/?ref=linkedin, that one word is kept with your
+          account so we can count which links bring people in. There are no analytics or advertising cookies.
         </p>
 
         <h2>Your choices</h2>

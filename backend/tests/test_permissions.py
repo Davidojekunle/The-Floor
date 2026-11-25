@@ -29,6 +29,7 @@ MATRIX = {
     "call.start":          (True,  True,  True),
     "call.manage_any":     (True,  True,  False),
     "meeting.schedule":    (True,  True,  False),
+    "room.rename":         (True,  False, False),
 }
 
 

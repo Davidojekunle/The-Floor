@@ -87,3 +87,14 @@ class CallInvite(Base):
     call_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("calls.id", ondelete="CASCADE"))
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     tag_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), nullable=True)
+
+
+class CallRsvp(Base):
+    """An invitee's answer to a meeting: going or declined."""
+
+    __tablename__ = "call_rsvps"
+
+    call_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("calls.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    response: Mapped[str] = mapped_column(String(20))  # going | declined
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

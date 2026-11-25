@@ -6,6 +6,7 @@ import { CallButton } from '../room/CallButton'
 import { CallRow } from '../room/CallList'
 import { MeetingDialog } from '../room/MeetingDialog'
 import { useCan, useRoom } from '../room/roomContext'
+import { RoomBack } from '../room/RoomBack'
 
 const PAGE = 20
 
@@ -31,6 +32,7 @@ export function CallsPage() {
 
   return (
     <div className="page">
+      <RoomBack />
       <div className="page-head">
         <div>
           <h1>Calls</h1>

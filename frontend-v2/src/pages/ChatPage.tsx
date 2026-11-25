@@ -20,6 +20,7 @@ import { typingLabel, useTyping } from '../room/useTyping'
 import { CallButton } from '../room/CallButton'
 import { CallCardJoin } from '../room/CallCardJoin'
 import { MeetingCardLine } from '../room/MeetingCardLine'
+import { CallLiveBar } from '../room/CallLiveBar'
 
 const MAX = 4000
 const GROUP_MS = 5 * 60 * 1000 // consecutive messages from one person within 5 minutes share a header
@@ -273,6 +274,7 @@ function ChatView() {
           {room.member_count}
         </Link>
       </header>
+      <CallLiveBar />
 
       <div className="chat-body">
         <div className="chat-log" ref={log} onScroll={onScroll} aria-live="polite" aria-label="Messages">

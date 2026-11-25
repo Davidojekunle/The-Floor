@@ -32,7 +32,58 @@ logger = logging.getLogger("taskroom.calls")
 
 # ================================================================== reading
 
+PREFETCH = "call_prefetch"  # set only while a list is being built (list_calls), then dropped
+
+
+def _pre(db: Session) -> dict | None:
+    return db.info.get(PREFETCH)
+
+
+def _prefetch(db: Session, calls: list[Call]) -> None:
+    """Load what every row of a call list needs in a few queries, instead of a few per row."""
+    from collections import defaultdict
+
+    from app.models.call import CallInvite, CallRsvp
+    from app.models.tag import Tag
+
+    ids = [c.id for c in calls]
+    parts, invites, rsvps = defaultdict(list), defaultdict(list), defaultdict(list)
+    if ids:
+        for p in db.scalars(select(CallParticipant).where(CallParticipant.call_id.in_(ids)).order_by(CallParticipant.joined_at)):
+            parts[p.call_id].append(p)
+        for r in db.scalars(select(CallInvite).where(CallInvite.call_id.in_(ids))):
+            invites[r.call_id].append(r)
+        for r in db.scalars(select(CallRsvp).where(CallRsvp.call_id.in_(ids))):
+            rsvps[r.call_id].append(r)
+    users = ({c.created_by for c in calls if c.created_by} | {p.user_id for v in parts.values() for p in v if p.user_id}
+             | {r.user_id for v in invites.values() for r in v if r.user_id} | {r.user_id for v in rsvps.values() for r in v})
+    names = dict(db.execute(select(User.id, User.name).where(User.id.in_(users))).all()) if users else {}
+    task_ids = {c.task_id for c in calls if c.task_id}
+    tasks = {t.id: t for t in db.scalars(select(Task).where(Task.id.in_(task_ids)))} if task_ids else {}
+    tag_ids = {r.tag_id for v in invites.values() for r in v if r.tag_id}
+    tags = dict(db.execute(select(Tag.id, Tag.name).where(Tag.id.in_(tag_ids))).all()) if tag_ids else {}
+    db.info[PREFETCH] = {"parts": parts, "invites": invites, "rsvps": rsvps, "names": names, "tasks": tasks,
+                         "tags": tags, "members": {}, "holders": {}}
+
+
+def _participants_of(db: Session, call_id) -> list[CallParticipant]:
+    pre = _pre(db)
+    if pre is not None:
+        return pre["parts"].get(call_id, [])
+    return list(db.scalars(select(CallParticipant).where(CallParticipant.call_id == call_id)
+                           .order_by(CallParticipant.joined_at)))
+
+
+def _names(db: Session, ids) -> dict:
+    pre = _pre(db)
+    if pre is not None:
+        return pre["names"]
+    return dict(db.execute(select(User.id, User.name).where(User.id.in_(ids))).all()) if ids else {}
+
+
 def _open_participants(db: Session, call_id) -> list[CallParticipant]:
+    if _pre(db) is not None:
+        return [p for p in _participants_of(db, call_id) if p.left_at is None]
     return list(db.scalars(select(CallParticipant).where(CallParticipant.call_id == call_id,
                                                          CallParticipant.left_at.is_(None))))
 
@@ -42,7 +93,7 @@ def _in_call(db: Session, call: Call) -> list[UserBrief]:
     if call.status != CallStatus.LIVE:
         return []
     ids = list(dict.fromkeys(p.user_id for p in _open_participants(db, call.id) if p.user_id))
-    names = dict(db.execute(select(User.id, User.name).where(User.id.in_(ids))).all()) if ids else {}
+    names = _names(db, ids)
     return [UserBrief(id=i, name=names[i]) for i in ids if i in names]
 
 
@@ -51,8 +102,11 @@ def _can_end(ctx: RoomContext, call: Call) -> bool:
 
 
 def call_out(db: Session, ctx: RoomContext, call: Call) -> CallOut:
-    task = db.get(Task, call.task_id) if call.task_id else None
-    creator = db.get(User, call.created_by) if call.created_by else None
+    pre = _pre(db)
+    task = (pre["tasks"].get(call.task_id) if pre is not None else db.get(Task, call.task_id)) if call.task_id else None
+    names = _names(db, [call.created_by] if call.created_by else [])
+    creator = UserBrief(id=call.created_by, name=names[call.created_by]) \
+        if call.created_by and call.created_by in names else None
     return CallOut(
         id=call.id, room_id=call.room_id, task={"id": task.id, "title": task.title} if task else None,
         kind=call.kind, status=call.status, missed=call.missed, title=call.title, description=call.description,
@@ -62,33 +116,27 @@ def call_out(db: Session, ctx: RoomContext, call: Call) -> CallOut:
         ended_at=as_utc(call.ended_at) if call.ended_at else None,
         joinable_from=as_utc(call.starts_at) - meeting_service.JOIN_EARLY if call.kind == CallKind.SCHEDULED
         else as_utc(call.started_at or call.created_at),
-        created_by=UserBrief(id=creator.id, name=creator.name) if creator else None,
+        created_by=creator,
         participants=_in_call(db, call), external_url=call.external_url,
         can_end=call.status == CallStatus.LIVE and _can_end(ctx, call),
         can_edit=meeting_service.can_edit(ctx, call),
-        attended=_attended(db, call), duration_minutes=_duration(call),
+        attended=_attended(db, call), duration_minutes=_duration(db, call),
         invite=meeting_service.invite_out(db, call) if call.kind == CallKind.SCHEDULED else None,
         repeats=call.series_id is not None,
+        rsvp=meeting_service.rsvp_out(db, ctx, call) if call.kind == CallKind.SCHEDULED else None,
     )
 
 
 def _attended(db: Session, call: Call) -> list[UserBrief]:
-    ids = list(dict.fromkeys(db.scalars(select(CallParticipant.user_id).where(
-        CallParticipant.call_id == call.id, CallParticipant.user_id.is_not(None)).order_by(CallParticipant.joined_at))))
-    names = dict(db.execute(select(User.id, User.name).where(User.id.in_(ids))).all()) if ids else {}
+    ids = list(dict.fromkeys(p.user_id for p in _participants_of(db, call.id) if p.user_id))
+    names = _names(db, ids)
     return [UserBrief(id=i, name=names[i]) for i in ids if i in names]
 
 
-def db_has_people(call: Call) -> bool:
-    """Anyone ever joined (a call nobody joined has no length worth showing)."""
-    from sqlalchemy.orm import object_session
-
-    s = object_session(call)
-    return s is not None and s.scalar(select(CallParticipant.id).where(CallParticipant.call_id == call.id).limit(1)) is not None
-
-
-def _duration(call: Call) -> int | None:
-    if call.status == CallStatus.ENDED and call.started_at and call.ended_at and not call.missed             and db_has_people(call):
+def _duration(db: Session, call: Call) -> int | None:
+    """How long it ran (only if anyone joined: a call nobody joined has no length worth showing)."""
+    if call.status == CallStatus.ENDED and call.started_at and call.ended_at and not call.missed \
+            and _participants_of(db, call.id):
         return max(1, round((as_utc(call.ended_at) - as_utc(call.started_at)).total_seconds() / 60))
     if call.status == CallStatus.SCHEDULED and call.starts_at and call.ends_at_planned:
         return int((as_utc(call.ends_at_planned) - as_utc(call.starts_at)).total_seconds() // 60)
@@ -127,7 +175,11 @@ def list_calls(db: Session, ctx: RoomContext, *, status: str | None, task_id, of
         q = q.where(at < end)
     total = db.scalar(select(func.count()).select_from(q.subquery()))
     rows = db.scalars(q.order_by(Call.created_at.desc(), Call.id).offset(offset).limit(limit)).all()
-    return [call_out(db, ctx, c) for c in rows], total
+    _prefetch(db, list(rows))
+    try:
+        return [call_out(db, ctx, c) for c in rows], total
+    finally:
+        db.info.pop(PREFETCH, None)
 
 
 def _live(db: Session, room_id, task_id) -> Call | None:

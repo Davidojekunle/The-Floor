@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_room_context
+from app.core.openapi import err
 from app.core.ratelimit import HOUR, limiter
 from app.db.session import get_db
 from app.models.user import User
@@ -18,6 +19,7 @@ from app.schemas.room import (
     JoinRequestPage,
     MembershipOut,
     RoomCreate,
+    RoomRename,
     RoomOut,
     RoomSummaryPage,
 )
@@ -45,6 +47,13 @@ def list_my_rooms(
 
 @router.get("/{room_id}", response_model=RoomOut)
 def get_room(ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    return room_service.room_out(db, ctx)
+
+
+@router.patch("/{room_id}", response_model=RoomOut, responses={403: err("Only the head can rename the room.")})
+def rename_room(body: RoomRename, ctx: RoomContext = Depends(get_room_context), db: Session = Depends(get_db)):
+    """Rename the room (head only)."""
+    room_service.rename(db, ctx, body.name)
     return room_service.room_out(db, ctx)
 
 

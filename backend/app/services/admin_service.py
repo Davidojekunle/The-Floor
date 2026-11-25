@@ -133,6 +133,8 @@ def stats(db: Session, now: datetime | None = None) -> dict:
         "pending_join_requests": _count(
             db, select(func.count()).select_from(Membership).where(Membership.status == MembershipStatus.PENDING)
         ),
+        "with_3_members": _count(db, select(func.count()).select_from(members).where(members.c.n >= 3)),
+        "real": _count(db, select(func.count()).select_from(_real_rooms())),
     }
 
     finished = _finished_tasks()
@@ -179,7 +181,41 @@ def stats(db: Session, now: datetime | None = None) -> dict:
         "work": work,
         "activity": activity,
         "weeks": _weeks(db, now),
+        "sources": _sources(db, week),
     }
+
+
+def _real_rooms():
+    """Rooms being used by a real group: 3+ active members and at least one stage done."""
+    members = (
+        select(Membership.room_id)
+        .where(Membership.status == MembershipStatus.ACTIVE)
+        .group_by(Membership.room_id)
+        .having(func.count() >= 3)
+    )
+    worked = select(Task.room_id).join(Stage, Stage.task_id == Task.id).where(Stage.status == StageStatus.DONE)
+    return select(Room.id).where(Room.id.in_(members), Room.id.in_(worked)).subquery()
+
+
+def _sources(db: Session, week: datetime) -> list[dict]:
+    """Sign-ups and rooms by the ?ref= word people arrived with, busiest first."""
+    src = func.coalesce(User.signup_source, "direct")
+    out: dict[str, dict] = {}
+    for name, people, recent in db.execute(
+        select(src, func.count(), func.sum(case((User.created_at >= week, 1), else_=0))).group_by(src)
+    ):
+        out[name] = {"source": name, "people": people, "people_7d": int(recent or 0), "rooms_started": 0, "real_rooms": 0}
+    real = _real_rooms()
+    for name, started, good in db.execute(
+        select(src, func.count(Room.id), func.count(real.c.id))
+        .select_from(Room)
+        .join(User, User.id == Room.created_by)
+        .outerjoin(real, real.c.id == Room.id)
+        .group_by(src)
+    ):
+        row = out.setdefault(name, {"source": name, "people": 0, "people_7d": 0, "rooms_started": 0, "real_rooms": 0})
+        row["rooms_started"], row["real_rooms"] = started, good
+    return sorted(out.values(), key=lambda r: (-r["real_rooms"], -r["rooms_started"], -r["people"], r["source"]))
 
 
 def _weeks(db: Session, now: datetime) -> list[dict]:

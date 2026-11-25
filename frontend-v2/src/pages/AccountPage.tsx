@@ -74,7 +74,7 @@ function ProfileSection() {
   const [name, setName] = useState(user!.name)
   const [timezone, setTimezone] = useState(user!.timezone)
   const [error, setError] = useState<{ name?: string; timezone?: string; form?: string }>({})
-  const zones = Intl.supportedValuesOf('timeZone')
+  const zones = timeZones(user!.timezone)
   const changed = name.trim() !== user!.name || timezone !== user!.timezone
 
   const save = useMutation({
@@ -525,4 +525,27 @@ function SessionsSection() {
       )}
     </Section>
   )
+}
+
+/** Old IANA names some browsers still list, and the names used today. */
+const RENAMED: Record<string, string> = {
+  'Asia/Calcutta': 'Asia/Kolkata',
+  'Asia/Saigon': 'Asia/Ho_Chi_Minh',
+  'Europe/Kiev': 'Europe/Kyiv',
+  'Asia/Katmandu': 'Asia/Kathmandu',
+  'Asia/Rangoon': 'Asia/Yangon',
+  'America/Godthab': 'America/Nuuk',
+  'Atlantic/Faeroe': 'Atlantic/Faroe',
+  'Pacific/Ponape': 'Pacific/Pohnpei',
+  'Pacific/Truk': 'Pacific/Chuuk',
+  'Pacific/Enderbury': 'Pacific/Kanton',
+  'Europe/Uzhgorod': 'Europe/Kyiv',
+  'Europe/Zaporozhye': 'Europe/Kyiv',
+}
+
+/** Every timezone under its current name, plus the one saved on the account (even an old name), sorted. */
+function timeZones(saved: string): string[] {
+  const all = new Set(Intl.supportedValuesOf('timeZone').map((z) => RENAMED[z] ?? z))
+  all.add(saved)
+  return [...all].sort()
 }

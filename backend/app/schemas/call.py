@@ -113,6 +113,7 @@ class CallOut(BaseModel):
     duration_minutes: int | None = Field(None, description="How long it ran, once ended; planned length while scheduled")
     invite: InviteOut | None = Field(None, description="Meetings only")
     repeats: bool = Field(False, description="Part of a repeating series")
+    rsvp: "RsvpOut | None" = Field(None, description="Meetings: who's going, who can't, and my answer")
     external_url: str | None
     can_end: bool = Field(description="May press End for everyone: whoever started it, the head or a temp head")
     can_edit: bool
@@ -130,3 +131,17 @@ class JoinPass(BaseModel):
     token: str | None = None
     expires_at: datetime | None = None
     url: str | None = Field(None, description="link: a pasted Meet or Zoom link to open instead")
+
+
+class RsvpOut(BaseModel):
+    going: list[UserBrief]
+    declined: list[UserBrief]
+    mine: Literal["going", "declined"] | None = None
+    invited: bool = Field(description="I'm invited, so I can answer")
+
+
+class RsvpIn(BaseModel):
+    response: Literal["going", "declined"] | None = Field(description="null takes the answer back")
+
+
+CallOut.model_rebuild()

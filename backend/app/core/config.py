@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     call_max_minutes: int = 180
     call_empty_grace_seconds: int = 120  # a call ends this long after the last person leaves
     call_check_interval_seconds: float = 60  # the loop that asks the provider who is in each live call
+    # the owner: the only account that can make or remove admins (comma-separate several). Never set through the API.
+    owner_email: str = "davidoiekunle@gmail.com"
+
+    # task assistant: describe a task in plain words, Claude drafts it (staff only while we try it)
+    anthropic_api_key: str = ""  # empty = the assistant is off
+    assistant_provider: str = "anthropic"  # anthropic | fake (tests)
+    assistant_model: str = "claude-haiku-5-5"
+    assistant_weekly_limit: int = 5  # new descriptions per room per 7 days
+    assistant_max_turns: int = 6  # questions and answers in one description
+    assistant_timeout_seconds: float = 30
     smtp_host: str = "localhost"
     smtp_port: int = 587
     smtp_username: str = ""

@@ -77,5 +77,9 @@ export const inviteByEmail = (roomId: string, emails: string[]) =>
     body: { emails },
   })
 
+/** The head renames the room; the chat says so. */
+export const renameRoom = (roomId: string, name: string) =>
+  apiRequest<Room>(`/rooms/${roomId}`, { method: 'PATCH', body: { name } })
+
 export const regenerateInvite = (roomId: string) =>
   apiRequest<{ invite_code: string }>(`/rooms/${roomId}/invite/regenerate`, { method: 'POST' })

@@ -15,6 +15,7 @@ export type ChatEventType =
   | 'call_ended'
   | 'meeting_scheduled'
   | 'meeting_cancelled'
+  | 'room_renamed'
   | 'task_completed'
   | 'temp_head_granted'
   | 'temp_head_revoked'

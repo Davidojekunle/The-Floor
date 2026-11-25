@@ -1,3 +1,4 @@
+import re
 import uuid
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -32,11 +33,25 @@ def check_password_bytes(v: str) -> str:
     return v
 
 
+def clean_source(v: str | None) -> str | None:
+    """A ?ref= word such as "linkedin". Anything odd is dropped rather than failing the sign-up."""
+    if not v or len(v) > 200:
+        return None
+    v = re.sub(r"[^a-z0-9_-]", "", v.strip().lower())[:32]
+    return v or None
+
+
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: EmailStr
     password: str = Field(min_length=8)
     timezone: str = "UTC"
+    source: str | None = Field(None, description='The ?ref= word from the link that brought them, e.g. "linkedin"')
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def tidy_source(cls, v):
+        return clean_source(v if isinstance(v, str) else None)
 
     @field_validator("name")
     @classmethod
@@ -83,6 +98,8 @@ class MeResponse(UserOut):
     email_verified: bool = Field(False, description="Clicked the link we emailed. Until then the app asks them to.")
     calls_enabled: bool = Field(False, description="Calls are on for this person (everyone, or staff while testing).")
     announcement: str | None = Field(None, description="Staff's site-wide message, shown as a banner")
+    is_owner: bool = Field(False, description="The owner: can make and remove admins")
+    task_assistant: bool = Field(False, description="Can describe tasks in plain words (staff only while we try it)")
 
 
 class UpdateMeRequest(BaseModel):

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LiveKitRoom, VideoConference } from '@livekit/components-react'
 import '@livekit/components-styles'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { callErrorText, cancelMeeting, endCall, getCall, joinCall, type Call, type JoinPass } from '../api/calls'
 import { Avatar } from '../components/Avatar'
-import { ConfirmDialog } from '../components/Dialog'
+import { ConfirmDialog, Dialog } from '../components/Dialog'
 import { Icon } from '../components/Icon'
 import { Switch } from '../components/Switch'
 import { useToast } from '../components/toastContext'
@@ -14,6 +14,7 @@ import { useRoom } from '../room/roomContext'
 import { MeetingDialog } from '../room/MeetingDialog'
 import { dayAndTime, timeOfDay } from '../lib/dates'
 import { useTimezone } from '../lib/useTimezone'
+import { RsvpBox } from '../room/RsvpBox'
 
 type Phase = 'ready' | 'joining' | 'in' | 'left' | 'error'
 type LivekitPass = Extract<JoinPass, { provider: 'livekit' }>
@@ -40,6 +41,7 @@ export function CallPage() {
   const [confirmEnd, setConfirmEnd] = useState(false)
 
   const call = useQuery({ queryKey: ['call', room.id, callId], queryFn: () => getCall(room.id, callId), retry: false })
+  const [params, setParams] = useSearchParams()
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['call', room.id, callId] })
 
   const join = async () => {
@@ -75,6 +77,15 @@ export function CallPage() {
     },
     onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't cancel the meeting. Try again."),
   })
+
+  // Arrived from a push's Join button: skip the ready screen once the call is known to be live
+  const autoJoin = params.get('join') === '1' && call.data?.status === 'live' && phase === 'ready'
+  useEffect(() => {
+    if (!autoJoin) return
+    setParams({}, { replace: true })
+    void join()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the call has loaded
+  }, [autoJoin])
 
   const end = useMutation({
     mutationFn: () => endCall(room.id, callId),
@@ -208,15 +219,36 @@ export function CallPage() {
       )}
 
       {editing && <MeetingDialog meeting={c} onClose={() => { setEditing(false); refresh() }} />}
-      {confirmCancel && (
+      {confirmCancel && !c.repeats && (
         <ConfirmDialog
           title={`Cancel ${c.title}?`}
-          body={c.repeats ? 'Invitees are told and it comes off their calendars. Cancel just this one, or this and the later ones?' : 'Invitees are told and it comes off their calendars.'}
-          confirmLabel={c.repeats ? 'Cancel this and later ones' : 'Cancel meeting'}
+          body="Invitees are told and it comes off their calendars."
+          confirmLabel="Cancel meeting"
           pending={cancel.isPending}
           onClose={() => setConfirmCancel(false)}
-          onConfirm={() => cancel.mutate(c.repeats)}
+          onConfirm={() => cancel.mutate(false)}
         />
+      )}
+      {confirmCancel && c.repeats && (
+        <Dialog
+          title={`Cancel ${c.title}?`}
+          onClose={() => setConfirmCancel(false)}
+          actions={
+            <>
+              <button className="btn ghost" type="button" onClick={() => setConfirmCancel(false)}>
+                Keep it
+              </button>
+              <button className="btn danger-outline" type="button" disabled={cancel.isPending} onClick={() => cancel.mutate(false)}>
+                Just this one
+              </button>
+              <button className="btn danger" type="button" disabled={cancel.isPending} onClick={() => cancel.mutate(true)}>
+                This and later ones
+              </button>
+            </>
+          }
+        >
+          <p className="muted">It repeats. Invitees are told, and what you cancel comes off their calendars.</p>
+        </Dialog>
       )}
       {confirmEnd && (
         <ConfirmDialog
@@ -259,6 +291,7 @@ function MeetingDetails(props: { call: Call; open: boolean; onJoin: () => void; 
           </>
         )}
       </dl>
+      <RsvpBox call={c} />
       {open ? (
         <button className="btn primary" type="button" disabled={props.joining} onClick={props.onJoin}>
           <Icon name="video" />

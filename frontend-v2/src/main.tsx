@@ -20,9 +20,11 @@ import { AuthProvider } from './auth/authProvider'
 import { ToastProvider } from './components/toast'
 import { LiveProvider } from './live/LiveProvider'
 import { registerServiceWorker } from './lib/push'
+import { captureRef } from './lib/ref'
 
 const queryClient = new QueryClient()
 registerServiceWorker() // browser push only (public/sw.js)
+captureRef() // ?ref=linkedin: counted at sign-up, see lib/ref.ts
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

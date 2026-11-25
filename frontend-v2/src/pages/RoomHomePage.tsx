@@ -408,6 +408,7 @@ function RecentActivity() {
 }
 
 function EmptyTasks({ filter, canCreate, roomId }: { filter: Filter; canCreate: boolean; roomId: string }) {
+  const assistant = !!useAuth().user?.task_assistant
   if (filter === 'mine')
     return (
       <div className="empty">
@@ -420,7 +421,7 @@ function EmptyTasks({ filter, canCreate, roomId }: { filter: Filter; canCreate: 
       <p>{canCreate ? 'Create the first one, or start from a template.' : 'Tasks the head creates will show up here.'}</p>
       {canCreate && (
         <Link className="btn" to={`/rooms/${roomId}/tasks/new`} style={{ marginTop: 8 }}>
-          New task
+          {assistant ? 'Describe your first task' : 'New task'}
         </Link>
       )}
     </div>

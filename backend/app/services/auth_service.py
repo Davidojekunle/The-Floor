@@ -19,7 +19,9 @@ def _dummy_hash() -> str:
     return hash_password("not-a-real-password")
 
 
-def register_user(db: Session, *, name: str, email: str, password: str, timezone: str) -> User:
+def register_user(
+    db: Session, *, name: str, email: str, password: str, timezone: str, source: str | None = None
+) -> User:
     email = normalize_email(email)
     message = "An account with this email already exists."
     taken = Conflict(message, fields={"email": message})
@@ -29,7 +31,7 @@ def register_user(db: Session, *, name: str, email: str, password: str, timezone
     db.commit()  # hand the database connection back while bcrypt runs: it takes seconds on a small CPU, and a
     # burst of sign-ins holding connections would run the pool dry
 
-    user = User(name=name, email=email, password_hash=hash_password(password), timezone=timezone)
+    user = User(name=name, email=email, password_hash=hash_password(password), timezone=timezone, signup_source=source)
     db.add(user)
     try:
         db.commit()

@@ -13,6 +13,7 @@ import { useTimezone } from '../lib/useTimezone'
 import { ProposalRow } from '../room/ProposalRow'
 import { useCan, useRoom } from '../room/roomContext'
 import { useRoomError } from '../room/useRoomError'
+import { RoomBack } from '../room/RoomBack'
 
 /** Everything in the room waiting on my decision: people asking to join, and proposed tasks. */
 export function RequestsPage() {
@@ -24,6 +25,7 @@ export function RequestsPage() {
 
   return (
     <div className="page">
+      <RoomBack />
       <div className="page-head">
         <div>
           <h1>Requests</h1>

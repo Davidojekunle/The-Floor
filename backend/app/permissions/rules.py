@@ -23,6 +23,7 @@ ALL_PERMISSIONS = (
     "room.delete",
     "head.transfer",
     "invite.manage",
+    "room.rename",
     "chat.send",
     "chat.delete_any",
     "call.start",

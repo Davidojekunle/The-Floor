@@ -1804,3 +1804,177 @@ a.row:hover {
 .admin-announce .invite-field .input {
   font-family: inherit; /* a sentence, not a link */
 }
+
+/* ---------- chat's "call in progress" bar, RSVP, phone back links ---------- */
+.call-live-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px max(20px, env(safe-area-inset-right, 0px)) 8px max(20px, env(safe-area-inset-left, 0px));
+  background: var(--ok-soft);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.call-live-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rsvp {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.room-back {
+  display: none;
+}
+@media (max-width: 760px) {
+  .room-back {
+    display: block; /* the sidebar does this on desktop */
+  }
+}
+#room-name {
+  font-family: inherit; /* a name, not a link */
+}
+
+/* Admin: sign-ups and rooms by ?ref= link */
+.admin-sources {
+  overflow-x: auto;
+}
+.admin-sources table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.admin-sources th,
+.admin-sources td {
+  text-align: right;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border, #e5e5e2);
+  white-space: nowrap;
+}
+.admin-sources th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+.admin-sources thead th {
+  font-weight: 500;
+  color: var(--text-2, #575754);
+}
+
+/* Task assistant: describe a task in plain words (staff only while we try it) */
+.assistant {
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.assistant-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.assistant-head h2 {
+  margin: 0;
+}
+.assistant-left {
+  white-space: nowrap;
+}
+.assistant-thread {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.assistant-thread li {
+  padding: 10px 12px;
+  border-radius: var(--r);
+  white-space: pre-wrap;
+  max-width: 90%;
+}
+.assistant-thread li.me {
+  justify-self: end;
+  background: var(--accent-soft, #e8edfc);
+}
+.assistant-thread li.it {
+  justify-self: start;
+  background: var(--subtle);
+}
+.assistant-draft {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+.assistant-draft ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+.assistant-draft li span {
+  display: block;
+}
+.assistant-input {
+  display: grid;
+  gap: 8px;
+}
+.assistant-input textarea {
+  width: 100%;
+  resize: vertical;
+}
+.assistant-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assistant-done {
+  margin: 0;
+  color: var(--ok);
+}
+.assistant-example {
+  margin: 0;
+}
+
+/* Admin: admins list and the change log */
+.admin-people,
+.admin-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.admin-people li,
+.admin-log li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.admin-people .badge {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.admin-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.admin-add input {
+  flex: 1 1 220px;
+}
+.admin-add .err {
+  flex-basis: 100%;
+  margin: 0;
+}

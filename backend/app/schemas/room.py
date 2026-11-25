@@ -43,6 +43,18 @@ class RoomCreate(BaseModel):
         return v
 
 
+class RoomRename(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def tidy(cls, v: str) -> str:
+        v = " ".join(v.split())
+        if not v:
+            raise ValueError("Give the room a name.")
+        return v
+
+
 class RoomOut(BaseModel):
     id: uuid.UUID
     name: str

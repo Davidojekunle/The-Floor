@@ -20,7 +20,8 @@ export function CallRow({ call: c }: { call: Call }) {
     tone = 'is-live'
   } else if (c.status === 'scheduled') {
     const invited = c.invite?.everyone ? 'Everyone' : names([...(c.invite?.tags ?? []).map((t) => ({ name: t.name })), ...(c.invite?.users ?? [])])
-    state = `${c.duration_minutes} min · ${invited}${c.repeats ? ' · repeats' : ''}`
+    const going = c.rsvp?.going.length ? ` · ${c.rsvp.going.length} going` : ''
+    state = `${c.duration_minutes} min · ${invited}${going}${c.repeats ? ' · repeats' : ''}`
   } else if (c.status === 'cancelled') {
     state = 'Cancelled'
     tone = 'is-off'

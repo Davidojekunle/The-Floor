@@ -6,8 +6,10 @@ from app.api.deps import require_staff
 from app.core.openapi import err
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.admin import AdminStats, SiteInfo, SiteSettings, SiteSettingsUpdate
-from app.services import admin_service, site_service
+import uuid
+
+from app.schemas.admin import AdminAdd, AdminEventOut, AdminPerson, AdminStats, SiteInfo, SiteSettings, SiteSettingsUpdate
+from app.services import admin_people, admin_service, site_service
 
 router = APIRouter()
 
@@ -46,6 +48,31 @@ def update_site_settings(body: SiteSettingsUpdate, user: User = Depends(require_
         raise Conflict("Calls can't be switched on until LiveKit's keys are added to the server's settings.")
     site_service.update(db, user, changes)
     return _settings(db)
+
+
+@router.get("/admins", response_model=list[AdminPerson], responses=STAFF_ONLY)
+def list_admins(_: User = Depends(require_staff), db: Session = Depends(get_db)):
+    """Everyone who can open the admin page."""
+    return admin_people.list_admins(db)
+
+
+@router.post("/admins", response_model=list[AdminPerson], responses={**STAFF_ONLY, 404: err("Not the owner, or no such account.")})
+def add_admin(body: AdminAdd, user: User = Depends(require_staff), db: Session = Depends(get_db)):
+    """Owner only: make someone an admin by their account email."""
+    return admin_people.add_admin(db, user, body.email)
+
+
+@router.delete("/admins/{user_id}", response_model=list[AdminPerson],
+               responses={**STAFF_ONLY, 409: err("CONFLICT: the owner can't be removed.")})
+def remove_admin(user_id: uuid.UUID, user: User = Depends(require_staff), db: Session = Depends(get_db)):
+    """Owner only: stop someone being an admin."""
+    return admin_people.remove_admin(db, user, user_id)
+
+
+@router.get("/log", response_model=list[AdminEventOut], responses=STAFF_ONLY)
+def admin_log(_: User = Depends(require_staff), db: Session = Depends(get_db)):
+    """The last 50 changes: switches turned on or off, admins added or removed. Newest first."""
+    return admin_people.events(db)
 
 
 public = APIRouter()

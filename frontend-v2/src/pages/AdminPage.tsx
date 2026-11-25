@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
 import { getAdminStats, type AdminStats } from '../api/admin'
+import { AdminPeople } from './AdminPeople'
 import { AdminSettings } from './AdminSettings'
 import { useAuth } from '../auth/useAuth'
 import { relativeTime } from '../lib/dates'
@@ -52,6 +53,7 @@ export function AdminPage() {
         ) : (
           <>
             <AdminSettings />
+            <AdminPeople />
             <AdminBody s={stats.data} />
           </>
         )}
@@ -104,6 +106,7 @@ function AdminBody({ s }: { s: AdminStats }) {
           <Stat value={s.people.total} label="Accounts" note={`${s.people.new_7d} new this week`} />
           <Stat value={s.people.active_7d} label="Active this week" note={`${s.people.active_30d} in 30 days`} />
           <Stat value={s.rooms.total} label="Rooms" note={`${s.rooms.active_30d} active in 30 days`} />
+          <Stat value={s.rooms.real} label="Real rooms" note={`3+ members and a stage done · ${s.rooms.with_3_members} have 3+ members`} />
           <Stat value={s.rooms.average_members} label="Members per room" note="on average" />
           <Stat value={s.people.with_push} label="Push on" note="people with it on a device" />
           <Stat value={s.people.with_calendar} label="Calendar links" note="people who made one" />
@@ -154,6 +157,7 @@ function AdminBody({ s }: { s: AdminStats }) {
         </div>
       </section>
 
+      <Sources s={s} />
       <Weeks s={s} />
       <p className="faint small">Updated {relativeTime(s.generated_at, tz)}. Refreshes every 30 seconds.</p>
     </>
@@ -183,6 +187,40 @@ function Stat(props: { value: number | string; label: string; note?: string; ton
       <div className="admin-label">{props.label}</div>
       {props.note && <div className="faint small">{props.note}</div>}
     </div>
+  )
+}
+
+function Sources({ s }: { s: AdminStats }) {
+  if (!s.sources?.length) return null
+  return (
+    <section className="admin-sec" aria-labelledby="adm-sources">
+      <h2 id="adm-sources">Where people come from</h2>
+      <div className="admin-sources">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Link</th>
+              <th scope="col">Sign-ups</th>
+              <th scope="col">This week</th>
+              <th scope="col">Rooms started</th>
+              <th scope="col">Real rooms</th>
+            </tr>
+          </thead>
+          <tbody>
+            {s.sources.map((r) => (
+              <tr key={r.source}>
+                <th scope="row">{r.source === 'direct' ? 'No link' : `?ref=${r.source}`}</th>
+                <td>{r.people}</td>
+                <td>{r.people_7d}</td>
+                <td>{r.rooms_started}</td>
+                <td>{r.real_rooms}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="faint small">Share thefloorapp.me/?ref=linkedin (or any one word) and sign-ups from it are counted here. Accounts made before this was added show as No link.</p>
+    </section>
   )
 }
 

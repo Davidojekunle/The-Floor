@@ -47,19 +47,36 @@ def when(dt: datetime, tz_name: str | None) -> str:
 
 # ================================================================== who's invited
 
+def _pre(db: Session) -> dict | None:
+    return db.info.get("call_prefetch")  # see call_service.list_calls
+
+
 def _active_members(db: Session, room_id) -> set:
-    return set(db.scalars(select(Membership.user_id).where(Membership.room_id == room_id,
-                                                           Membership.status == MembershipStatus.ACTIVE)))
+    pre = _pre(db)
+    if pre is not None and room_id in pre["members"]:
+        return pre["members"][room_id]
+    found = set(db.scalars(select(Membership.user_id).where(Membership.room_id == room_id,
+                                                            Membership.status == MembershipStatus.ACTIVE)))
+    if pre is not None:
+        pre["members"][room_id] = found
+    return found
 
 
 def _tag_holders(db: Session, room_id, tag_ids) -> set:
     if not tag_ids:
         return set()
-    return set(db.scalars(
+    pre = _pre(db)
+    key = (room_id, frozenset(tag_ids))
+    if pre is not None and key in pre["holders"]:
+        return pre["holders"][key]
+    found = set(db.scalars(
         select(Membership.user_id).join(MembershipTag, MembershipTag.membership_id == Membership.id)
         .where(MembershipTag.tag_id.in_(list(tag_ids)), Membership.room_id == room_id,
                Membership.status == MembershipStatus.ACTIVE)
     ))
+    if pre is not None:
+        pre["holders"][key] = found
+    return found
 
 
 def resolve(db: Session, room_id, *, everyone: bool, user_ids, tag_ids) -> set:
@@ -70,18 +87,30 @@ def resolve(db: Session, room_id, *, everyone: bool, user_ids, tag_ids) -> set:
     return (set(user_ids) | _tag_holders(db, room_id, tag_ids)) & members
 
 
+def _invite_rows(db: Session, call: Call) -> list:
+    pre = _pre(db)
+    if pre is not None:
+        return pre["invites"].get(call.id, [])
+    return db.scalars(select(CallInvite).where(CallInvite.call_id == call.id)).all()
+
+
 def invitees(db: Session, call: Call) -> set:
-    rows = db.scalars(select(CallInvite).where(CallInvite.call_id == call.id)).all()
+    rows = _invite_rows(db, call)
     return resolve(db, call.room_id, everyone=call.invite_everyone,
                    user_ids=[r.user_id for r in rows if r.user_id], tag_ids=[r.tag_id for r in rows if r.tag_id])
 
 
 def invite_out(db: Session, call: Call) -> dict:
-    rows = db.scalars(select(CallInvite).where(CallInvite.call_id == call.id)).all()
+    rows = _invite_rows(db, call)
     uids = [r.user_id for r in rows if r.user_id]
     tids = [r.tag_id for r in rows if r.tag_id]
-    users = db.execute(select(User.id, User.name).where(User.id.in_(uids))).all() if uids else []
-    tags = db.execute(select(Tag.id, Tag.name).where(Tag.id.in_(tids))).all() if tids else []
+    pre = _pre(db)
+    if pre is not None:
+        users = [(u, pre["names"][u]) for u in uids if u in pre["names"]]
+        tags = [(t, pre["tags"][t]) for t in tids if t in pre["tags"]]
+    else:
+        users = db.execute(select(User.id, User.name).where(User.id.in_(uids))).all() if uids else []
+        tags = db.execute(select(Tag.id, Tag.name).where(Tag.id.in_(tids))).all() if tids else []
     return {"everyone": call.invite_everyone, "users": [{"id": i, "name": n} for i, n in users],
             "tags": [{"id": i, "name": n} for i, n in tags]}
 
@@ -473,3 +502,44 @@ def for_feed(db: Session, user: User, room_id=None) -> list[Call]:
     return list(db.scalars(select(Call).where(Call.room_id == room_id, Call.kind == CallKind.SCHEDULED,
                                               Call.status != CallStatus.CANCELLED, Call.starts_at < end,
                                               Call.ends_at_planned > start)))
+
+
+# ================================================================== RSVP
+
+def rsvp_out(db: Session, ctx: RoomContext, call: Call) -> dict:
+    from app.models.call import CallRsvp
+
+    me = ctx.membership.user_id
+    pre = _pre(db)
+    rows = pre["rsvps"].get(call.id, []) if pre is not None else db.scalars(select(CallRsvp).where(CallRsvp.call_id == call.id)).all()
+    ids = [r.user_id for r in rows]
+    names = pre["names"] if pre is not None else (
+        dict(db.execute(select(User.id, User.name).where(User.id.in_(ids))).all()) if ids else {})
+    pick = lambda kind: [{"id": r.user_id, "name": names[r.user_id]} for r in rows  # noqa: E731
+                         if r.response == kind and r.user_id in names]
+    mine = next((r.response for r in rows if r.user_id == me), None)
+    return {"going": pick("going"), "declined": pick("declined"), "mine": mine, "invited": me in invitees(db, call)}
+
+
+def answer(db: Session, ctx: RoomContext, call_id, response: str | None) -> Call:
+    """An invitee says going or can't make it (or takes it back). Only while the meeting is coming up."""
+    from app.models.call import CallRsvp
+
+    call = _meeting(db, ctx, call_id)
+    if call.status != CallStatus.SCHEDULED:
+        raise CallEnded("This meeting has already started or finished.")
+    me = ctx.membership.user_id
+    if me not in invitees(db, call):
+        raise Forbidden("Only people invited to this meeting can answer.")
+    row = db.get(CallRsvp, (call.id, me))
+    if response is None:
+        if row is not None:
+            db.delete(row)
+    else:
+        if row is None:
+            row = CallRsvp(call_id=call.id, user_id=me, response=response)
+            db.add(row)
+        row.response, row.updated_at = response, utcnow()
+    live.call_changed(db, call)
+    db.commit()
+    return call

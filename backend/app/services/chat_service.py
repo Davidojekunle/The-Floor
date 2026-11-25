@@ -58,6 +58,7 @@ def _render(event: str, actor: str, subject: str, task: str, stage: str, detail:
         "temp_head_granted": f"{actor} made {subject} temporary head until {until}",
         "temp_head_revoked": f"{actor} ended {subject}'s temporary head role",
         "member_left": f"{actor} left the room",
+        "room_renamed": f"{actor} renamed the room to {detail.get('new', '')}",
         "head_transferred": f"{actor} made {subject} the head",
     }[event]
 

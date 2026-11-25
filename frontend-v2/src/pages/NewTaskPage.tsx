@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../auth/useAuth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { createTask, listTemplates } from '../api/tasks'
@@ -8,6 +9,7 @@ import { useToast } from '../components/toastContext'
 import { endOfDayIso } from '../lib/dates'
 import { useTimezone } from '../lib/useTimezone'
 import { useCan, useRoom } from '../room/roomContext'
+import { TaskAssistant } from '../room/TaskAssistant'
 import { TaskForm } from '../room/TaskForm'
 import { blankDraft, newStage, ownerFields, type DraftTask } from '../room/taskDraft'
 
@@ -20,7 +22,9 @@ export function NewTaskPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [initial] = useState(() => blankDraft(tz))
+  const { user } = useAuth()
+  const [initial, setInitial] = useState(() => blankDraft(tz))
+  const [formKey, setFormKey] = useState(0) // a new key re-mounts the form with the assistant's draft
 
   const templates = useQuery({ queryKey: ['templates', room.id], queryFn: () => listTemplates(room.id) })
 
@@ -89,7 +93,16 @@ export function NewTaskPage() {
           </p>
         </div>
       </div>
+      {user?.task_assistant && (
+        <TaskAssistant
+          onConfirm={(d) => {
+            setInitial(d)
+            setFormKey((k) => k + 1)
+          }}
+        />
+      )}
       <TaskForm
+        key={formKey}
         initial={initial}
         submitLabel={proposing ? 'Send for approval' : 'Create task'}
         pendingLabel={proposing ? 'Sending…' : 'Creating…'}

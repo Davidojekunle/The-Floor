@@ -211,6 +211,21 @@ def list_rooms_for_user(db: Session, user: User) -> list[RoomSummary]:
     ]
 
 
+def rename(db: Session, ctx: RoomContext, name: str) -> None:
+    """The head renames the room. The chat says so, and everyone's room list updates."""
+    require(ctx, "room.rename", "Only the head can rename the room.")
+    old = ctx.room.name
+    if name == old:
+        return
+    ctx.room.name = name
+    chat_service.post_system(db, room_id=ctx.room.id, event="room_renamed", actor_id=ctx.membership.user_id,
+                             detail={"old": old, "new": name})
+    live.room_changed(db, ctx.room.id)
+    for uid in live.room_members(db, ctx.room.id):
+        live.account_changed(db, uid)  # the switcher shows room names from /me
+    db.commit()
+
+
 def regenerate_invite(db: Session, ctx: RoomContext) -> InviteOut:
     require(ctx, "invite.manage")
     ctx.room.invite_code = _new_invite_code(db)

@@ -30,9 +30,15 @@ def get(db: Session) -> dict:
 
 
 def update(db: Session, user: User, changes: dict) -> dict:
+    from app.services import admin_people  # here, not at the top: admin_people never imports this module back
+
+    before = dict(get(db))
     for key, value in changes.items():
         if key not in DEFAULTS:
             continue
+        if before.get(key) != value:
+            short = lambda v: v[:200] if isinstance(v, str) else v  # noqa: E731
+            admin_people.log(db, user, "setting_changed", {"key": key, "old": short(before.get(key)), "new": short(value)})
         row = db.get(SiteSetting, key)
         if row is None:
             row = SiteSetting(key=key)

@@ -8,6 +8,7 @@ import { Menu } from '../components/Menu'
 import { useToast } from '../components/toastContext'
 import { useCan, useRoom } from '../room/roomContext'
 import { useRoomError } from '../room/useRoomError'
+import { RoomBack } from '../room/RoomBack'
 
 /** Reusable stage lists, e.g. "Video shoot: Script → Shoot → Edit". */
 export function TemplatesPage() {
@@ -44,6 +45,7 @@ export function TemplatesPage() {
           {room.name}
         </Link>
       </div>
+      <RoomBack />
       <div className="page-head">
         <div>
           <h1>Templates</h1>

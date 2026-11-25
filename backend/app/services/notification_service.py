@@ -166,7 +166,8 @@ def notify(db: Session, user_id, type_: str, title: str, *, room=None, task=None
             body = f"The result of “{data['result_stage']}” is attached."
         else:
             body = n.room_name if n.room_name and n.room_name not in n.title else None  # titles usually name the room
-        push_service.queue(db, user_id, title=n.title, body=body, url=target_path(n), tag=str(n.id))
+        join = [{"action": "join", "title": "Join"}] if type_ in ("call_started", "meeting_reminder") else None
+        push_service.queue(db, user_id, title=n.title, body=body, url=target_path(n), tag=str(n.id), actions=join)
     return n
 
 

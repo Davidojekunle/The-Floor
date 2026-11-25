@@ -1,4 +1,4 @@
-"""Who can open the admin page. Staff is never granted through the API, only here.
+"""Who can open the admin page. The owner (OWNER_EMAIL) can also add and remove admins from the admin page.
 
     cd backend
     python -m scripts.staff list

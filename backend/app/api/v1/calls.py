@@ -15,7 +15,7 @@ from app.core.openapi import err
 from app.core.ratelimit import MINUTE, limiter
 from app.db.session import get_db
 from app.permissions.rules import RoomContext
-from app.schemas.call import CallOut, CallPage, ClashCheck, ClashOut, JoinPass, MeetingIn, MeetingUpdate, StartCall
+from app.schemas.call import CallOut, CallPage, ClashCheck, ClashOut, JoinPass, MeetingIn, MeetingUpdate, RsvpIn, StartCall
 from app.schemas.common import UtcDateTime
 from app.schemas.common import PageParams, page_params
 from app.services import call_service, meeting_service, site_service, video
@@ -115,6 +115,14 @@ def update_meeting(call_id: uuid.UUID, body: MeetingUpdate, ctx: RoomContext = D
     if "invite" in changes:
         changes["invite"] = body.invite
     return call_service.call_out(db, ctx, meeting_service.update(db, ctx, call_id, changes))
+
+
+@meetings.put("/{call_id}/rsvp", response_model=CallOut,
+              responses={403: err("Only invitees can answer."), 409: err("CALL_ENDED: it already started or finished.")})
+def rsvp_meeting(call_id: uuid.UUID, body: RsvpIn, ctx: RoomContext = Depends(get_room_context),
+                 db: Session = Depends(get_db)):
+    """Going, can't make it, or null to take the answer back."""
+    return call_service.call_out(db, ctx, meeting_service.answer(db, ctx, call_id, body.response))
 
 
 @meetings.delete("/{call_id}", status_code=204,

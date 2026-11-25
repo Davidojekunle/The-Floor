@@ -31,6 +31,8 @@ export type Me = {
   email_verified: boolean // clicked the link we emailed; until then a banner asks them to
   calls_enabled: boolean // calls are on for me (everyone, or staff while testing); off: no call controls anywhere
   announcement: string | null // staff's site-wide message, shown as a banner
+  is_owner?: boolean // can add and remove admins
+  task_assistant?: boolean // can describe tasks in plain words (staff only while we try it)
 }
 
 export type MeUpdate = { name?: string; timezone?: string; theme?: Theme }
@@ -40,6 +42,7 @@ export type RegisterInput = {
   email: string
   password: string
   timezone: string
+  source?: string | null // the ?ref= word that brought them (lib/ref.ts)
 }
 
 type LoginResponse = {
